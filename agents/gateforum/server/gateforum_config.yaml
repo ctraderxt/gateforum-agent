@@ -1,0 +1,60 @@
+# GateForum Debate Engine — configuration
+#
+# The research engine is self-contained: it drives a 12-agent research cycle through an
+# OpenAI-compatible chat completions endpoint (opencode-go / deepseek-v4-flash) with no
+# heavy framework dependency. This keeps the whole stack GPU-free and avoids the
+# stale TradingAgents-crypto fork.
+
+# ── Debate pairs (Hummingbot-USDT perpetuals; must exist on the venue) ──
+pairs:
+  - BTC-USDT   # crypto
+  - XAU-USDT   # spot gold
+  - CL-USDT    # WTI crude oil
+
+# Aliases the engine understands when a request names the asset by base symbol.
+pair_aliases:
+  BTC: BTC-USDT
+  XAU: XAU-USDT
+  CL: CL-USDT
+  GOLD: XAU-USDT
+  OIL: CL-USDT
+
+# ── LLM provider (OpenAI-compatible) ─────────────────────────────────
+# Use the same provider as Smart-Money Flow: opencode-go with deepseek-v4-flash.
+# Resolves identically to agent_key: custom@opencode-go:deepseek-v4-flash.
+#   backend_url -> GATEFORUM_BACKEND_URL env, else CUSTOM_LLM_BASE_URL
+#   api_key     -> GATEFORUM_API_KEY, else CUSTOM_LLM_API_KEY (= OPENCODE_GO_API_KEY)
+llm:
+  provider: "opencode-go"                   # label only
+  model: "hy3"                            # GATEFORUM_DEEP_MODEL / GATEFORUM_QUICK_MODEL
+  backend_url: "https://opencode.ai/zen/go/v1"
+  api_key_env: "CUSTOM_LLM_API_KEY"        # falls back to OPENCODE_GO_API_KEY
+  temperature: 0.3
+  request_timeout_seconds: 90
+  max_tokens: 4000  # hy3 reasoning can exhaust smaller budgets -> empty answer (finish_reason=length)
+
+# ── Debate structure ─────────────────────────────────────────────────
+research:
+  max_research_rounds: 2        # bull<->bear rounds (sequential rebuttals, they attack each other)
+  max_risk_rounds: 1          # risk analyst rounds
+  analysts: [market, social, news, fundamentals]
+  # If True, the engine ignores the LLM and returns a deterministic mock
+  # decision. Lets the full Condor pipeline be exercised with no API key.
+  # False = live LLM research (needs CUSTOM_LLM_API_KEY / GATEFORUM_API_KEY).
+  mock_mode: false
+
+# ── Confidence rubric ────────────────────────────────────────────────
+confidence:
+  baseline: 60                     # fallback when no agent states a conviction
+  floor: 65                         # tradeable verdicts never report below this
+  max: 95
+  # Conviction-driven adjustments (see research_engine._parse_verdict):
+  decisive_alignment_bonus: 5       # bull/bear spread >= 25 -> decisive
+  contested_discount: 5             # near-tie (spread < 10) -> genuine disagreement
+  contrarian_penalty: 3             # loser side more convicted than the winner
+
+# ── Server ───────────────────────────────────────────────────────────
+server:
+  host: "127.0.0.1"
+  port: 8500
+  rate_limit_seconds: 180       # min seconds between research cycles per pair
