@@ -1,0 +1,37 @@
+# Learnings
+
+## Market Observations
+- [2026-08-16 04:11] Tick 1: all three uncorrelated GateForum pairs (BTC/XAU/CL) voted LONG at 75% in the same debate — rare cross-asset consensus.
+- [2026-08-16 04:46] Tick2: tick1's unanimous cross-asset LONG consensus broke within one tick — BTC flipped to SELL 80% while XAU/CL went HOLD; single-tick unanimous consensus is not sticky.
+- [2026-08-16 06:06] Tick1: GateForum can return high-confidence HOLD on all pairs (BTC 80%, CL 75%, XAU 55%) with zero actionable — high confidence on HOLD is not a trade signal.
+- [2026-08-16 15:19] Tick1 fresh: council returned 2/3 actionable SELL (BTC 85%, XAU 75%) while CL HOLDed at 95% — risk-off BTC/XAU tilt with neutral energy.
+- [2026-08-16 18:02] Tick3: after 3 straight ticks of unanimous high-confidence HOLD, the council flipped to 3/3 actionable with a direction split — XAU/CL LONG (commodities) vs BTC SHORT (crypto risk-off). Divergence, not consensus, is the tradeable state.
+- [2026-08-18 17:55] Tick4: council returned 3/3 BUY at uniform 87% (BTC/XAU/CL LONG) — unanimous LONG re-formed one tick after tick3's direction split; CL flipped SHORT→LONG within one tick.
+- [2026-08-18 19:18] Tick8: after 3 ticks of unanimous LONG, the council split — BTC/XAU BUY vs CL SELL 75%, forcing a CL reversal close; energy diverges from the risk-on crowd.
+- [2026-08-18 20:01] Tick10: XAU-USDT council direction is the least sticky of the three — flipped SELL 75% (tick9) to BUY 80% (tick10) in one tick; treat gold direction flips as low-conviction noise.
+- [2026-08-18 22:06] Tick16: XAU flipped HOLD 55%→SELL 80% actionable and BTC flipped BUY 75%→SELL 75% within one tick while CL held BUY 95% — crypto+gold tilting short against a lone crude long; XAU actionable but min 0.002 (~$8.68) still exceeds the $8 minimal cap.
+- [2026-08-19 06:46] Tick42: CL LONG stuck at break-even for 3 straight ticks (+0.01 → -0.01 → -0.01) despite 85-95% BUY verdicts — crude's 4h uptrend verdict isn't producing momentum at $8 scale.
+
+## Execution Notes
+- [2026-08-16 07:54] Tick3: risk/confirmation gate refused a 2nd position (BTC SHORT $6.3) while CL LONG $8 open — "Position Size $8/$10 limit" behaves as aggregate notional, capping total across executors until a position closes. (Now $24 cap / 3 slots.)
+- [2026-08-16 08:31] Tick4: with CL $8 open, the $10 aggregate cap leaves <=$2 headroom — below every pair's min contract (BTC 0.0001=$6.3, XAU 0.001=$4.4, CL) — so the 2nd position slot is unusable until the CL barrier closes. (Now $24 cap / 3 slots.)
+- [2026-08-16 09:39] OBSOLETE — a still-running debate used to mean "no fresh verdict, hold". With the 300s routine budget, the debate fits in the blocking run: wait for it (action="run" returns the verdict), and only if it still times out treat it as no-fresh-verdict (hold). Never fall back to the prior tick's verdicts.
+- [2026-08-16 10:45] Tick8: gate_io shows a fresh XAU-USDT SELL MARKET order (0.0020, since 10:11) with no matching executor created — stale order remnants can carry recent timestamps, not just old ones.
+- [2026-08-16 14:05] Tick1: gate_io dust remnants are now 6 offsetting perps (LONG+SHORT on each of BTC/XAU/CL) plus 6 stale OPEN market orders — they net ~$0, lock ~$0.38 margin, and are invisible to the risk gate.
+- [2026-08-16 16:01] manage_executors create: total_amount_quote (and connector_name/trading_pair/side/amount/leverage) must live INSIDE executor_config — top-level args are ignored by the risk gate and the create is denied.
+- [2026-08-16 16:23] Tick1: actionable CL-USDT BUY 95% was blocked by the skip-pair check — prior-run offsetting CL perps (LONG 0.28 / SHORT -0.19) count as 'already open', so no 2nd position may be added on the pair.
+- [2026-08-16 17:21] Tick1: exchange shows non-dust single-leg remnants — BTC SHORT -0.0003 (~$18.9 net) and CL LONG 0.09 (~$7.3 net), each |net|≥$1, so BTC and CL count as open and would block new entries; XAU is the only clean pair.
+- [2026-08-16 18:02] Tick3: prior-run BTC/CL single-leg perp remnants cleared themselves between ticks (exchange now shows 0 open positions), but 4 stale OPEN market orders (BTC 0.0003/0.0005, CL 0.19/0.19) persist unfilled — positions can self-clear while stale orders linger.
+- [2026-08-16 18:45] ROOT CAUSE of the dust: the hummingbot-api gate_io_perpetual connector DROPPED position_action in _place_order, so in HEDGE mode every SELL/BUY OPENED a leg and "closes" never reduced — the offsetting dust was the accumulated trail of failed closes (incl. the bot's own executor closes). Fixed with a connector patch: position_action=CLOSE → data["reduce_only"]=True; re-apply after any hummingbot-api container rebuild. With reduce_only, closes actually close (verified live: dust cleared, XAU/CL/BTC back to real net positions only).
+- [2026-08-16 19:05] Risk-judge veto is now CONSENSUS-gated: HOLD only stands when >=2 of the 3 risk analysts also lean HOLD. A lone veto is overruled (research ruling prevails; disagreement lowers confidence only). The absolute first-word veto had killed 5 of 6 ticks. Verified: vetoed BTC SHORT 90 now trades; genuine 3-analyst veto still blocks.
+- [2026-08-16 19:20] ORPHAN self-heal: exchange perp positions with NO managing executor are now detected by gateforum_orphans.py (compares :8000 positions vs :8099 running executors, net >= $1 = real) and closed autonomously by the self-heal watchdog via reduce-only market orders (recipe 8). Verified end-to-end: created a test orphan -> watchdog detected, closed it, verified "OK: no orphan positions".
+- [2026-08-16 19:25] Cross-session visibility: a session's executor list is filtered by ITS OWN controller_id — a previous session's still-open position is invisible to it. The skip-pair check MUST use get_portfolio_overview (exchange truth across all controllers), and controller_id must stay INSIDE executor_config on create (the no-pop patch) so executors are tagged per-session.
+- [2026-08-18 16:47] Executor service :8000 lacks gate_io_perpetual credentials (GateIoPerpetualDerivative missing api_key/secret/user_id on create) even though MCP can still read the connector; bitget/bitget_perpetual are the only venues with working executor credentials right now.
+- [2026-08-18 17:31] bitget_perpetual lists all three GateForum pairs (BTC/XAU/CL) and holds the live USDT balance ($59.86) — de-facto tradeable venue while gate_io_perpetual executor credentials stay missing.
+- [2026-08-18 17:55] XAU-USDT position_executor FAILED twice on bitget_perpetual (0.0018 & 0.001834, 0 volume) — min contract exceeds the $8 minimal cap, so XAU is unopenable in minimal size mode.
+- [2026-08-18 17:55] bitget_perpetual BTC min contract is 0.0001 BTC (~$6.5), not 0.001 — BTC IS openable within the $8 minimal cap; tick3's 'min 0.001 > cap' BTC skip was wrong.
+- [2026-08-18 18:38] Tick6: BTC LONG position_executor vanished from the RUNNING list (only CL remains) while its exchange position (0.0001 BTC, +$0.12%) stays open — executors can detach from positions without closing them, even within the same session/controller.
+- [2026-08-18 18:58] bitget_perpetual portfolio reports CL-USDT position leverage 10.0 while BTC-USDT shows 1.0 — the requested 1x executor leverage is not consistently reflected in the account symbol leverage.
+- [2026-08-18 21:25] Tick14: gateforum_research blocking run can time out at the 300s budget even when the server finishes the debate (cycles 45→48) — the verdicts are then unreachable; hold and journal, do not re-run or poll.
+
+## Retired Insights
