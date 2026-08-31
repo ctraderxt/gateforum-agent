@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1920, initial-scale=1">
-<title>GateForum — Condor Builders Cup</title>
+<title>GateForum — Agent Builders Cup</title>
 <style>
   :root {
     --bg: #080c14; --surface: #111827; --surface2: #1a2235; --border: #1e2d45;
@@ -26,8 +26,10 @@
     z-index: 100; flex-shrink: 0; padding: 0;
   }
   .sidebar-header {
-    padding: 40px 32px 32px; border-bottom: 1px solid var(--border);
+    padding: 32px 32px 28px; border-bottom: 1px solid var(--border);
   }
+  .sidebar-mark { display: flex; justify-content: flex-start; margin-bottom: 10px; }
+  .sidebar-mark svg { width: 52px; height: 36px; display: block; }
   .sidebar-logo { font-size: 36px; font-weight: 800; color: var(--teal); letter-spacing: -0.02em; }
   .sidebar-subtitle { font-size: 18px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
   .sidebar-nav { flex: 1; display: flex; flex-direction: column; padding: 16px 0; gap: 0; overflow-y: auto; }
@@ -140,20 +142,31 @@
   <!-- ═══════════════ SIDEBAR ═══════════════ -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo">🧭 GateForum</div>
-      <div class="sidebar-subtitle">Condor Builders Cup</div>
+      <div class="sidebar-mark" aria-hidden="true">
+        <svg viewBox="0 0 72 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- three-head council: left · center · right -->
+          <circle cx="18" cy="14" r="8" fill="#2dd4bf" opacity="0.55"/>
+          <path d="M4 42c0-9 6.2-14 14-14s14 5 14 14" fill="#2dd4bf" opacity="0.45"/>
+          <circle cx="54" cy="14" r="8" fill="#2dd4bf" opacity="0.55"/>
+          <path d="M40 42c0-9 6.2-14 14-14s14 5 14 14" fill="#2dd4bf" opacity="0.45"/>
+          <circle cx="36" cy="12" r="9.5" fill="#2dd4bf"/>
+          <path d="M18 44c0-11 8-16.5 18-16.5S54 33 54 44" fill="#2dd4bf"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo">GateForum</div>
+      <div class="sidebar-subtitle">Agent Builders Cup</div>
     </div>
     <nav class="sidebar-nav" id="sidenav">
       <a class="nav-item active" data-slide="0"><span class="nav-num">00</span><span class="nav-dot"></span> About Me</a>
       <a class="nav-item" data-slide="1"><span class="nav-num">01</span><span class="nav-dot"></span> About GateForum</a>
-      <a class="nav-item" data-slide="2"><span class="nav-num">02</span><span class="nav-dot"></span> The Research Floor</a>
-      <a class="nav-item" data-slide="3"><span class="nav-num">03</span><span class="nav-dot"></span> Live Research Floor</a>
-      <a class="nav-item" data-slide="4"><span class="nav-num">04</span><span class="nav-dot"></span> Strategy Stack</a>
-      <a class="nav-item" data-slide="5"><span class="nav-num">05</span><span class="nav-dot"></span> 12 Agents</a>
+      <a class="nav-item" data-slide="2"><span class="nav-num">02</span><span class="nav-dot"></span> 12 Agents</a>
+      <a class="nav-item" data-slide="3"><span class="nav-num">03</span><span class="nav-dot"></span> The Research Floor</a>
+      <a class="nav-item" data-slide="4"><span class="nav-num">04</span><span class="nav-dot"></span> Live Research Floor</a>
+      <a class="nav-item" data-slide="5"><span class="nav-num">05</span><span class="nav-dot"></span> Strategy Stack</a>
       <a class="nav-item" data-slide="6"><span class="nav-num">06</span><span class="nav-dot"></span> Pair Selection</a>
       <a class="nav-item" data-slide="7"><span class="nav-num">07</span><span class="nav-dot"></span> Risk Framework</a>
       <a class="nav-item" data-slide="8"><span class="nav-num">08</span><span class="nav-dot"></span> Why This Wins</a>
-      <a class="nav-item" data-slide="9"><span class="nav-num">09</span><span class="nav-dot"></span> Closing</a>
+      <a class="nav-item" data-slide="9"><span class="nav-num">09</span><span class="nav-dot"></span> Demo</a>
     </nav>
     <div class="sidebar-footer">
       <span style="color:var(--teal);">⌨️</span> ← → or click<br>
@@ -168,7 +181,9 @@
     <div class="slide active" data-slide="0" style="align-items:center;text-align:center;padding:80px 160px;">
       <div class="tag">ABOUT ME</div>
       <div class="card flex-col" style="max-width:1180px;align-items:center;text-align:center;gap:20px;">
-        <p style="font-size:30px;line-height:1.5;"><span class="teal">I am a Hummingbot community member since 2022.</span> I primarily run <span class="teal">Pure Market Making</span> but my coding skills are limited.</p>
+        <p style="font-size:32px;line-height:1.55;margin:0;">I am <span class="teal">Dan</span>, a.k.a <span class="teal">ctraderxt</span> in Discord.</p>
+        <p style="font-size:32px;line-height:1.55;margin:0;">a Hummingbot community member since <span class="teal">2022</span>.</p>
+        <p style="font-size:32px;line-height:1.55;margin:0;">I primarily run <span class="teal">Pure Market Making</span> before due to limited coding skills.</p>
         <div class="divider" style="margin:8px 0;"></div>
         <p style="font-size:26px;line-height:1.5;color:var(--muted);">Happy to see Hummingbot embracing AI with <span class="teal">Condor</span>, as it gives me <span class="teal">some superpowers too</span>. Now I can build AI trading agents without being a Python expert.</p>
         <p style="font-size:24px;color:var(--muted2);margin-top:8px;">GateForum is that agent!</p>
@@ -180,7 +195,7 @@
       <div class="tag">ABOUT GATEFORUM</div>
       <h1>GateForum</h1>
       <p style="font-size:38px;color:var(--muted);margin-bottom:16px;">Multi-Agent Research &amp; Decision Trader</p>
-      <p style="font-size:38px;color:var(--muted);margin-bottom:40px;"><span class="teal">12 AI Agents. Research → Analysis → Verdict.</span></p>
+      <p style="font-size:38px;color:var(--muted);margin-bottom:40px;"><span class="teal">12 AI Agents. Research → Analysis → Decision.</span></p>
       <div class="divider"></div>
       <div class="flex-row" style="margin-top:20px;gap:80px;">
         <div class="stat"><div class="value">3</div><div class="label">Diversified Pairs</div></div>
@@ -188,10 +203,79 @@
         <div class="stat"><div class="value">15m</div><div class="label">Research Cadence</div></div>
         <div class="stat"><div class="value">Gate.com</div><div class="label">Perpetuals</div></div>
       </div>
+      <p style="font-size:24px;color:var(--muted2);margin-top:28px;">Crypto &amp; Condor version of TauricResearch TradingAgents</p>
     </div>
 
-    <!-- ── SLIDE 2: THE RESEARCH FLOOR ── -->
-    <div class="slide" data-slide="2" style="padding-top:40px;">
+    <!-- ── SLIDE 2: THE 12 AGENTS ── -->
+    <div class="slide" data-slide="2">
+      <div class="tag">THE 12 AGENTS</div>
+      <h2 style="margin-bottom:28px;font-size:48px;">Meet the Research Council</h2>
+      <div class="grid-3" style="gap:20px;">
+        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
+          <div style="font-size:36px;margin-bottom:6px;">📊</div>
+          <h4 style="color:var(--blue);font-size:22px;">Market Analyst</h4>
+          <p style="font-size:19px;color:var(--muted);">OHLCV, technicals, price action. Calls technical bottoms/tops.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
+          <div style="font-size:36px;margin-bottom:6px;">📰</div>
+          <h4 style="color:var(--blue);font-size:22px;">News Analyst</h4>
+          <p style="font-size:19px;color:var(--muted);">Headlines, macro events, regulatory. Catalysts and risks.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
+          <div style="font-size:36px;margin-bottom:6px;">💬</div>
+          <h4 style="color:var(--blue);font-size:22px;">Social Analyst</h4>
+          <p style="font-size:19px;color:var(--muted);">Reddit, Twitter, sentiment. Crowd psychology meter.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
+          <div style="font-size:36px;margin-bottom:6px;">📈</div>
+          <h4 style="color:var(--blue);font-size:22px;">Fundamentals Analyst</h4>
+          <p style="font-size:19px;color:var(--muted);">Market cap, volume, supply. On-chain and network data.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--amber);">
+          <div style="font-size:36px;margin-bottom:6px;">🐂</div>
+          <h4 style="color:var(--amber);font-size:22px;">Bull Researcher</h4>
+          <p style="font-size:19px;color:var(--muted);">Argues the long case. Finds every reason to buy.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--amber);">
+          <div style="font-size:36px;margin-bottom:6px;">🐻</div>
+          <h4 style="color:var(--amber);font-size:22px;">Bear Researcher</h4>
+          <p style="font-size:19px;color:var(--muted);">Argues the short case. Finds every reason to sell.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--amber);">
+          <div style="font-size:36px;margin-bottom:6px;">⚖️</div>
+          <h4 style="color:var(--amber);font-size:22px;">Research Judge</h4>
+          <p style="font-size:19px;color:var(--muted);">Weighs both sides. Delivers investment plan with conviction.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--red);">
+          <div style="font-size:36px;margin-bottom:6px;">🔥</div>
+          <h4 style="color:var(--red);font-size:22px;">Aggressive Risk</h4>
+          <p style="font-size:19px;color:var(--muted);">Maximum warranted size. "This is the one."</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--purple);">
+          <div style="font-size:36px;margin-bottom:6px;">⚖️</div>
+          <h4 style="color:var(--purple);font-size:22px;">Neutral Risk</h4>
+          <p style="font-size:19px;color:var(--muted);">Balanced approach. Moderate sizing, acknowledge both sides.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--green);">
+          <div style="font-size:36px;margin-bottom:6px;">🛡️</div>
+          <h4 style="color:var(--green);font-size:22px;">Conservative Risk</h4>
+          <p style="font-size:19px;color:var(--muted);">Capital preservation. "What if we're wrong?"</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--teal);">
+          <div style="font-size:36px;margin-bottom:6px;">🏛️</div>
+          <h4 style="color:var(--teal);font-size:22px;">Risk Judge</h4>
+          <p style="font-size:19px;color:var(--muted);">Final gate. HOLD only stands with analyst consensus.</p>
+        </div>
+        <div class="card" style="padding:22px;border-top:3px solid var(--teal);">
+          <div style="font-size:36px;margin-bottom:6px;">💼</div>
+          <h4 style="color:var(--teal);font-size:22px;">Trader</h4>
+          <p style="font-size:19px;color:var(--muted);">Translates plan into execution. Size, entries, targets.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SLIDE 3: THE RESEARCH FLOOR ── -->
+    <div class="slide" data-slide="3" style="padding-top:40px;">
       <div class="tag">THE RESEARCH FLOOR</div>
       <h2 style="margin-bottom:22px;font-size:52px;">How 12 Agents Decide</h2>
 
@@ -259,8 +343,8 @@
       </div><!-- /body-left -->
     </div>
 
-    <!-- ── SLIDE 3: LIVE RESEARCH FLOOR (SCREENSHOT) ── -->
-    <div class="slide" data-slide="3" style="padding-top:40px;">
+    <!-- ── SLIDE 4: LIVE RESEARCH FLOOR (SCREENSHOT) ── -->
+    <div class="slide" data-slide="4" style="padding-top:40px;">
       <div class="tag">LIVE RESEARCH FLOOR</div>
       <h2 style="margin-bottom:24px;font-size:52px;">Every Verdict — Live &amp; Readable</h2>
       <div class="shot-frame" style="width:100%;max-width:1560px;">
@@ -269,8 +353,8 @@
       <p style="margin-top:18px;color:var(--muted);font-size:26px;text-align:center;">Every research cycle · every data · every ruling — <span class="teal">published live to the floor page every 15mins</span></p>
     </div>
 
-    <!-- ── SLIDE 4: STRATEGY STACK ── -->
-    <div class="slide" data-slide="4">
+    <!-- ── SLIDE 5: STRATEGY STACK ── -->
+    <div class="slide" data-slide="5">
       <div class="tag">STRATEGY STACK</div>
       <h2 style="margin-bottom:22px;font-size:48px;">Condor Agent · Routines · Hummingbot</h2>
 
@@ -325,7 +409,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
           <span class="d-node d-green" style="font-size:17px;">Position Executor</span>
           <span style="color:var(--muted2);font-size:17px;">→</span>
-          <span class="d-node d-green" style="font-size:17px;">SL 2% / TP 4% / 2h limit</span>
+          <span class="d-node d-green" style="font-size:17px;">SL 2% / TP 4% / 1h limit</span>
           <span style="color:var(--muted2);font-size:17px;">→</span>
           <span class="d-node d-green" style="font-size:17px;">Trailing Stop 1→2%</span>
           <span style="color:var(--muted2);font-size:17px;">→</span>
@@ -338,74 +422,6 @@
       </div>
 
       </div><!-- /body-left -->
-    </div>
-
-    <!-- ── SLIDE 5: THE 12 AGENTS ── -->
-    <div class="slide" data-slide="5">
-      <div class="tag">THE 12 AGENTS</div>
-      <h2 style="margin-bottom:28px;font-size:48px;">Meet the Research Council</h2>
-      <div class="grid-3" style="gap:20px;">
-        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
-          <div style="font-size:36px;margin-bottom:6px;">📊</div>
-          <h4 style="color:var(--blue);font-size:22px;">Market Analyst</h4>
-          <p style="font-size:19px;color:var(--muted);">OHLCV, technicals, price action. Calls technical bottoms/tops.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
-          <div style="font-size:36px;margin-bottom:6px;">📰</div>
-          <h4 style="color:var(--blue);font-size:22px;">News Analyst</h4>
-          <p style="font-size:19px;color:var(--muted);">Headlines, macro events, regulatory. Catalysts and risks.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
-          <div style="font-size:36px;margin-bottom:6px;">💬</div>
-          <h4 style="color:var(--blue);font-size:22px;">Social Analyst</h4>
-          <p style="font-size:19px;color:var(--muted);">Reddit, Twitter, sentiment. Crowd psychology meter.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--blue);">
-          <div style="font-size:36px;margin-bottom:6px;">📈</div>
-          <h4 style="color:var(--blue);font-size:22px;">Fundamentals Analyst</h4>
-          <p style="font-size:19px;color:var(--muted);">Market cap, volume, supply. On-chain and network data.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--amber);">
-          <div style="font-size:36px;margin-bottom:6px;">🐂</div>
-          <h4 style="color:var(--amber);font-size:22px;">Bull Researcher</h4>
-          <p style="font-size:19px;color:var(--muted);">Argues the long case. Finds every reason to buy.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--amber);">
-          <div style="font-size:36px;margin-bottom:6px;">🐻</div>
-          <h4 style="color:var(--amber);font-size:22px;">Bear Researcher</h4>
-          <p style="font-size:19px;color:var(--muted);">Argues the short case. Finds every reason to sell.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--amber);">
-          <div style="font-size:36px;margin-bottom:6px;">⚖️</div>
-          <h4 style="color:var(--amber);font-size:22px;">Research Judge</h4>
-          <p style="font-size:19px;color:var(--muted);">Weighs both sides. Delivers investment plan with conviction.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--red);">
-          <div style="font-size:36px;margin-bottom:6px;">🔥</div>
-          <h4 style="color:var(--red);font-size:22px;">Aggressive Risk</h4>
-          <p style="font-size:19px;color:var(--muted);">Maximum warranted size. "This is the one."</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--purple);">
-          <div style="font-size:36px;margin-bottom:6px;">⚖️</div>
-          <h4 style="color:var(--purple);font-size:22px;">Neutral Risk</h4>
-          <p style="font-size:19px;color:var(--muted);">Balanced approach. Moderate sizing, acknowledge both sides.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--green);">
-          <div style="font-size:36px;margin-bottom:6px;">🛡️</div>
-          <h4 style="color:var(--green);font-size:22px;">Conservative Risk</h4>
-          <p style="font-size:19px;color:var(--muted);">Capital preservation. "What if we're wrong?"</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--teal);">
-          <div style="font-size:36px;margin-bottom:6px;">🏛️</div>
-          <h4 style="color:var(--teal);font-size:22px;">Risk Judge</h4>
-          <p style="font-size:19px;color:var(--muted);">Final gate. HOLD only stands with analyst consensus.</p>
-        </div>
-        <div class="card" style="padding:22px;border-top:3px solid var(--teal);">
-          <div style="font-size:36px;margin-bottom:6px;">💼</div>
-          <h4 style="color:var(--teal);font-size:22px;">Trader</h4>
-          <p style="font-size:19px;color:var(--muted);">Translates plan into execution. Size, entries, targets.</p>
-        </div>
-      </div>
     </div>
 
     <!-- ── SLIDE 6: PAIR SELECTION ── -->
@@ -468,7 +484,7 @@
           <div style="font-size:21px;color:var(--muted);line-height:1.7;">
             <p>✓ <span class="teal">2%</span> stop loss (platform-enforced)</p>
             <p>✓ <span class="teal">4%</span> take profit</p>
-            <p>✓ <span class="teal">2h max</span> time limit — positions always cycle</p>
+            <p>✓ <span class="teal">1h max</span> time limit — positions always cycle</p>
             <p>✓ Trailing stop <span class="teal">1% → 2%</span> locks in winners</p>
             <p>✓ Every 30 min: close losers, 15-min cooldown, re-evaluate</p>
           </div>
@@ -499,23 +515,18 @@
       </div><!-- /body-left -->
     </div>
 
-    <!-- ── SLIDE 9: CLOSING ── -->
+    <!-- ── SLIDE 9: DEMO ── -->
     <div class="slide slide-closing" data-slide="9">
-      <div class="tag" style="font-size:24px;">GATEFORUM</div>
+      <div class="tag" style="font-size:24px;">DEMO</div>
       <h1 style="margin-bottom:12px;">The Council Decides</h1>
-      <p style="font-size:36px;color:var(--muted);text-align:center;max-width:900px;">12 Agents · Research → Analysis → Verdict</p>
+      <p style="font-size:36px;color:var(--muted);text-align:center;max-width:900px;">12 Agents · Research → Analysis → Decision</p>
       <div class="divider" style="background:linear-gradient(90deg, var(--teal), var(--amber));width:160px;"></div>
-      <div class="grid-3" style="margin-top:48px;max-width:1100px;">
-        <div class="stat"><div class="value">3</div><div class="label">Diversified Pairs</div></div>
-        <div class="stat"><div class="value">12</div><div class="label">AI Agents Researching</div></div>
-        <div class="stat"><div class="value">Gate.com</div><div class="label">Perpetuals Exchange</div></div>
+      <div style="margin-top:48px;text-align:center;font-size:32px;line-height:1.7;color:var(--muted);">
+        <div>Fully Tested</div>
+        <div>Running in Condor</div>
+        <div>Trading at Gate.com</div>
+        <div>Live Research Floor Webpage</div>
       </div>
-      <p style="margin-top:52px;color:var(--muted);font-size:30px;text-align:center;max-width:1000px;">
-        Intelligence by <span class="teal">GateForum's self-contained research engine</span> ·
-        Decisions by <span class="teal">Condor AI Agent</span> ·
-        Data by <span class="teal">Condor Routines</span> ·
-        Execution by <span class="teal">Hummingbot + Gate.com</span>
-      </p>
       <p style="margin-top:40px;font-size:24px;color:var(--muted2);font-style:italic;">"The whole is greater than the sum of its parts." — Aristotle</p>
     </div>
 
