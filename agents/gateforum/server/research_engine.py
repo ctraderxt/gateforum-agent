@@ -40,7 +40,8 @@ _ASSET_CONTEXT: dict[str, str] = {
 class EngineConfig:
     pairs: list[str] = field(default_factory=lambda: ["BTC-USDT", "XAU-USDT", "CL-USDT"])
     aliases: dict[str, str] = field(default_factory=dict)
-    model: str = "deepseek-v4-pro"
+    provider: str = "claude-cli"
+    model: str = "sonnet"
     backend_url: str = "https://opencode.ai/zen/go/v1"
     api_key: str = ""
     temperature: float = 0.3
@@ -53,8 +54,13 @@ class EngineConfig:
     confidence: dict[str, Any] = field(default_factory=dict)
 
     @property
+    def uses_claude_cli(self) -> bool:
+        p = (self.provider or "").lower()
+        return p in {"claude-cli", "claude", "claude-acp", "claude-code"}
+
+    @property
     def api_key_set(self) -> bool:
-        return bool(self.api_key)
+        return bool(self.api_key) or self.uses_claude_cli
 
     @classmethod
     def load(cls, path: Path = CONFIG_PATH) -> "EngineConfig":
@@ -80,10 +86,12 @@ class EngineConfig:
             os.getenv("GATEFORUM_API_KEY")
             or os.getenv(llm.get("api_key_env", "CUSTOM_LLM_API_KEY"))
             or os.getenv("OPENCODE_GO_API_KEY", "")
+            or os.getenv("OPENCODE_ZEN_API_KEY", "")
         )
         return cls(
             pairs=raw.get("pairs", cls().pairs),
             aliases=raw.get("pair_aliases", {}),
+            provider=str(llm.get("provider") or os.getenv("GATEFORUM_LLM_PROVIDER") or "claude-cli"),
             model=llm.get("model", cls().model),
             backend_url=backend_url,
             api_key=api_key,
@@ -112,8 +120,53 @@ def _base_of(pair: str) -> str:
 
 
 # ── LLM call ──────────────────────────────────────────────────────────────
+_CLAUDE_SEM = asyncio.Semaphore(3)
+
+
+async def _chat_claude_cli(system: str, user: str, cfg: EngineConfig) -> str:
+    """Council turn via WSL Claude Code email login (no API key)."""
+    env = os.environ.copy()
+    env["HOME"] = str(Path.home())
+    env.pop("ANTHROPIC_API_KEY", None)
+    env.pop("ANTHROPIC_AUTH_TOKEN", None)
+    cmd = [
+        "claude",
+        "-p",
+        user,
+        "--output-format",
+        "text",
+        "--system-prompt",
+        system,
+        "--model",
+        cfg.model or "sonnet",
+        "--tools",
+        "",
+        "--no-session-persistence",
+    ]
+    timeout = max(int(cfg.timeout), 120)
+    async with _CLAUDE_SEM:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
+            cwd=str(Path.home()),
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            raise TimeoutError(f"claude -p timed out after {timeout}s")
+    text = (stdout or b"").decode("utf-8", "replace").strip()
+    if proc.returncode != 0 and not text:
+        err = (stderr or b"").decode("utf-8", "replace").strip()
+        raise RuntimeError(err or f"claude -p exited {proc.returncode}")
+    return text
+
+
 async def _chat(system: str, user: str, cfg: EngineConfig) -> str:
-    """Single chat completion via the OpenAI-compatible endpoint.
+    """Single chat completion via Claude Code login or an OpenAI-compatible endpoint.
 
     Handles reasoning models (deepseek-v4-pro/flash, hy3): they emit their chain
     of thought in ``reasoning_content`` and the actual answer in ``content``. We
@@ -124,6 +177,24 @@ async def _chat(system: str, user: str, cfg: EngineConfig) -> str:
     """
     if cfg.mock_mode:
         return _mock_reply(system, user, cfg)
+
+    if cfg.uses_claude_cli:
+        last_err: Exception | None = None
+        for attempt in range(2):
+            try:
+                answer = (await _chat_claude_cli(system, user, cfg)).strip()
+                if answer:
+                    return answer
+                logger.warning("claude -p returned empty answer (attempt=%d)", attempt + 1)
+            except Exception as exc:  # noqa: BLE001
+                last_err = exc
+                logger.error("claude -p failed (attempt %d): %s", attempt + 1, exc)
+                if attempt == 0:
+                    await asyncio.sleep(2)
+                    continue
+        if last_err is not None:
+            raise last_err
+        return ""
 
     from openai import AsyncOpenAI  # imported lazily so mock mode needs nothing
 

@@ -4,7 +4,7 @@ description: >-
   Runs the research & decision loop - refresh data, convene the analysis council,
   then open and manage directional perp positions from verdicts that clear the
   confidence floor. Competition-tuned: 2x leverage, modest sizing, drawdown-scaling
-  instead of a hard stop, and a guaranteed hourly open/close for volume.
+  instead of a hard stop, and a 30-min loser-close cadence for volume.
 agent_key: null
 skills: []
 default_config:
@@ -77,7 +77,7 @@ a strategy. Instead, treat **8% drawdown as the "reduce" trigger**:
 
 | Drawdown | Position size | Time limit | Behavior |
 |---|---|---|---|
-| **0–4%** | normal (12% of balance) | 2h barrier | trade verdicts at full size |
+| **0–4%** | normal (12% of balance) | 1h barrier | trade verdicts at full size |
 | **4–8%** | half size (6% of balance) | 1h barrier | trade verdicts at half size |
 | **>8%** | quarter size (3% of balance) | **10–15 min** quick round-trip | keep trading, tiny size, fast close |
 
@@ -87,7 +87,7 @@ without risking meaningful capital. Never increase size while in drawdown. If th
 gate refuses an entry, journal it and keep the tick alive — do not treat it as a stop.
 
 **Enforcement note:** the risk gate (strategy `risk_limits`) enforces at the platform
-level — max 2 executors, max $96 position, 8% drawdown pause, max 2x leverage, and
+level — max 3 executors, max $96 position, 8% drawdown pause, max 2x leverage, and
 every position MUST carry a full triple barrier (stop_loss ≤10%, take_profit ≤50%,
 time_limit 60s–48h, valid trailing stop). The LLM cannot open an unprotected or
 over-leveraged position even if it tries; a blocked create is refused by the engine,
@@ -101,7 +101,7 @@ cadence:
 
 - **Close any open position that is in NEGATIVE unrealized P&L** at the 30-min mark.
   Realizing a small loss deliberately: (1) adds a close to the volume ledger,
-  (2) stops a loser from running toward its 2h time limit, (3) frees the slot for a
+  (2) stops a loser from running toward its 1h time limit, (3) frees the slot for a
   fresh verdict. This is active risk management — **cutting losers, running
   winners** — not churn.
 - **Do NOT close winners at the 30-min mark** — their take-profit / trailing barrier
@@ -193,7 +193,7 @@ manage_executors(
   triple_barrier_config={
     "stop_loss": 0.02,
     "take_profit": 0.04,
-    "time_limit": 7200,
+    "time_limit": 3600,
     "trailing_stop": {"activation_price": 0.01, "trailing_delta": 0.02},
     "open_order_type": 1
   }
@@ -248,7 +248,7 @@ Cooldowns: CL-USDT until 21:30 (closed 21:00 @ -$0.31) · BTC-USDT none · XAU-U
 | 4 | `get_portfolio_overview` | balance, open positions, drawdown % |
 | 5 | Filter | Actionable = YES, confidence ≥65%, skip open pairs, max 3 concurrent — **open EVERY actionable pair** (ranked by confidence) |
 | 6 | Size | 8/12/16% by confidence (65-74/75-84/≥85); ×1.0 (≤4% DD), ×0.5 (4-8%), ×0.25 (>8%) |
-| 7 | Create | `position_executor`, 2× leverage, `controller_id` INSIDE executor_config, barrier: SL 2% / TP 4% / 2h / trail 1→2% |
+| 7 | Create | `position_executor`, 2× leverage, `controller_id` INSIDE executor_config, barrier: SL 2% / TP 4% / 1h / trail 1→2% |
 | 8 | Manage | barrier closes; flip on reversal ≥75%; close on conviction collapse <50% |
 | 9 | Volume cadence | every 2nd tick (30-min): close NEGATIVE positions → 15-min pair cooldown (1 cycle) → then re-evaluate via trade session — never churn faster than 30 min |
 | 10 | Journal | verdicts, actions, drawdown %, decisive argument, **Cooldowns: line (mandatory)** |
@@ -262,8 +262,7 @@ forced trades outside the playbook.
 ## Operations (for operators, not the tick)
 
 This playbook is the *how to trade*. The *how to run* lives in AGENT.md
-(**Operations — zero-touch launch and self-healing**): the session auto-starts
-~1 min after condor boots (`gateforum_bootcheck.sh` via ExecStartPost), a 15-min
-watchdog self-heals and reports to Telegram, and services bind Tailscale/localhost
-only. You do not need to start, restart, or watch this strategy manually — if it is
-not running when the bot is up, that is a bug worth reporting, not a manual step.
+(**Operations — zero-touch launch and self-healing**): `gateforum_init` brings up
+`:8500` + `:8600` on every tick; `gateforum-heal.timer` (15 min) restarts API /
+Condor / server / floor / session if anything died. You do not start those by
+hand. If the floor is down while the session is running, that is a healer bug.

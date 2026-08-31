@@ -3,7 +3,7 @@ name: GateForum
 description: Multi-agent research & decision trader — twelve specialised LLM agents research
   every trade (four analysts, adversarial bull vs bear analysis, a research judge, then a
   three-way risk analysis) before a directional position is opened on perps.
-agent_key: custom@opencode-go:deepseek-v4-pro
+agent_key: claude-acp:sonnet
 tools:
 - get_market_data
 - get_portfolio_overview
@@ -17,6 +17,7 @@ when_to_consult: When the user wants a reasoned directional view on BTC, gold (X
   crude (CL) perps and wants to see the argument behind it — the bull case, the bear case,
   and the risk ruling — rather than a bare signal.
 server_required: true
+server_name: GateForum-Agent
 created_by: 0
 created_at: '2026-08-15T00:00:00+00:00'
 ---
@@ -116,20 +117,27 @@ $4–10/day total at race cadence. No GPU anywhere in the stack.
 
 ## Operations — zero-touch launch and self-healing
 
-The whole stack comes up on boot with **no manual instructions**, and heals itself
-if anything breaks mid-race:
+This WSL demo box has **no systemd condor-bot**. The stack is kept up by
+`gateforum_init` (every tick) plus a **15-minute systemd user timer**.
 
 | Layer | Mechanism |
 |---|---|
-| **Services** | systemd units (all `enabled`): condor-bot (:8099), research server (:8500), public page (:8600), research loop (15-min timer) |
-| **Session auto-start** | condor-bot's `ExecStartPost` runs `gateforum_bootcheck.sh` ~1 min after every start/restart — waits for the API, starts the trading session (minimal config) if it isn't running. Backup: `gateforum-bootcheck.timer` (boot + every 15 min) |
-| **Crash recovery** | systemd `Restart=on-failure` + session `restart_on_boot: true` (resumes sessions that died WITH the bot, preserving the saved minimal limits) |
-| **Self-heal watchdog** | Hermes cron `gateforum-self-heal` every 15 min — checks services/server/page/session/journal/**orphan positions** (exchange perps with no managing executor → closed via reduce-only orders); on a problem an agent diagnoses and fixes on the fly (restart service/session, re-apply known patches, close orphans), then reports to Telegram. Retries every 15 min until healed; zero cost when healthy |
-| **Access** | All services bind Tailscale/localhost only — the public page is for organizers/judges at `http://<tailscale-ip>:8600` (no auth); dashboard :8099 login-gated; trading gateway :15888 localhost-only |
-| **Judge page** | Story header (latest council decision in plain words) + live activity strip (sessions/decisions/positions/vol/last cycle) above the 3 asset columns |
+| **Hummingbot API** | docker compose in `~/hummingbot-api` (`127.0.0.1:8000`) + gateway `:15888` |
+| **Condor** | `uv run python main.py` with `HOME` set so Claude Code email login works; dashboard `http://127.0.0.1:8088` |
+| **Research server** | `gateforum_server.py` `:8500` — council uses `claude -p` (subscription), not opencode-go |
+| **Judge floor** | `gateforum_public.py` `:8600` — auto-started by `gateforum_init` and the healer |
+| **Session** | Start New Session in the dashboard, or the healer starts `gateforum_debate_operator` if idle |
+| **Self-heal** | `gateforum-heal.timer` every 15 min runs `server/gateforum_heal.py` — silent when healthy; restarts API/condor/server/floor/session; flags Gate orphans |
+| **Access** | loopback only on this box (`127.0.0.1`) |
 
-Logs: `/tmp/gateforum-bootcheck.log` (boot checks) · journal reports in `reports/` ·
+Logs: `/tmp/gateforum-heal.log` · `/tmp/gateforum-condor.log` · `server/gateforum_*.log` ·
 session journals under `strategies/gateforum_debate_operator/sessions/`.
+
+**Call shape (non-negotiable):** `controller_id` goes **inside** `executor_config`.
+The risk gate ignores a top-level id and cancels the create.
+
+**LLM:** Condor tick = `claude-acp:sonnet` (same subscription). Council = `claude -p --model sonnet`.
+Do not point the council at opencode-go — that account is monthly-capped.
 
 ## Quick reference
 
@@ -137,7 +145,7 @@ session journals under `strategies/gateforum_debate_operator/sessions/`.
 [IDENTITY]   Research & decision council — 12 agents analyze every trade, verdict ≥65% becomes a position.
 [EDGE]       Adversarial analysis + uncorrelated markets (BTC / XAU / CL).
 [PLAYBOOK]   See the strategy file for every-tick steps, sizing, call shapes, exits.
-[RISK]       Triple barrier enforced, 2x leverage cap, 3 positions max, 8% drawdown scaling, hourly loser-close volume cadence.
-[OPS]        Zero-touch: boot check auto-starts the session, 15-min watchdog self-heals, Telegram reports.
+[RISK]       Triple barrier enforced, 2x leverage cap, 3 positions max, 8% drawdown scaling, 30-min loser-close volume cadence.
+[OPS]        15-min systemd healer + tick `gateforum_init` keep server/floor/session up.
 [JOURNAL]    Record verdicts + actions each tick — the audit trail judges read.
 ```

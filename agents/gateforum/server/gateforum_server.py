@@ -132,6 +132,7 @@ async def health():
         "research_cycles": total,
         "uptime_seconds": (datetime.now(timezone.utc) - SESSION_START).total_seconds(),
         "llm_provider": CONFIG.model if not CONFIG.mock_mode else f"{CONFIG.model} (mock)",
+        "llm_ready": bool(CONFIG.mock_mode or CONFIG.api_key_set),
         "current_session": CURRENT_SESSION,
         "active_research": sorted(ACTIVE_RESEARCH),
     }

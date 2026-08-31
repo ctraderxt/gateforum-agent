@@ -19,23 +19,21 @@ pair_aliases:
   GOLD: XAU-USDT
   OIL: CL-USDT
 
-# ── LLM provider (OpenAI-compatible) ─────────────────────────────────
-# Use the same provider as Smart-Money Flow: opencode-go with deepseek-v4-flash.
-# Resolves identically to agent_key: custom@opencode-go:deepseek-v4-flash.
-#   backend_url -> GATEFORUM_BACKEND_URL env, else CUSTOM_LLM_BASE_URL
-#   api_key     -> GATEFORUM_API_KEY, else CUSTOM_LLM_API_KEY (= OPENCODE_GO_API_KEY)
+# ── LLM provider ─────────────────────────────────────────────────────
+# Default: WSL Claude Code email login (claude -p). No API key.
+# Set GATEFORUM_LLM_PROVIDER=opencode-go to fall back to the OpenAI-compatible path.
 llm:
-  provider: "opencode-go"                   # label only
-  model: "hy3"                            # GATEFORUM_DEEP_MODEL / GATEFORUM_QUICK_MODEL
+  provider: "claude-cli"
+  model: "sonnet"
   backend_url: "https://opencode.ai/zen/go/v1"
-  api_key_env: "CUSTOM_LLM_API_KEY"        # falls back to OPENCODE_GO_API_KEY
+  api_key_env: "CUSTOM_LLM_API_KEY"
   temperature: 0.3
   request_timeout_seconds: 90
-  max_tokens: 4000  # hy3 reasoning can exhaust smaller budgets -> empty answer (finish_reason=length)
+  max_tokens: 4000
 
 # ── Debate structure ─────────────────────────────────────────────────
 research:
-  max_research_rounds: 2        # bull<->bear rounds (sequential rebuttals, they attack each other)
+  max_research_rounds: 1        # bull<->bear rounds (sequential rebuttals)
   max_risk_rounds: 1          # risk analyst rounds
   analysts: [market, social, news, fundamentals]
   # If True, the engine ignores the LLM and returns a deterministic mock

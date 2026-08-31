@@ -25,11 +25,17 @@ logger = logging.getLogger("gateforum-public")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [PUBLIC] %(levelname)s %(message)s")
 
 DEBATE_SERVER = "http://127.0.0.1:8500"
-# The condor web server binds WEB_BIND_HOST (Tailscale IP) — the page fetches
-# stats from it server-side, so it must talk to the bind host, not loopback.
+# Condor web (for activity strip). Prefer live env; this WSL box is :8088.
 import os as _os
+from pathlib import Path as _Path
 
-CONDOR_WEB = f"http://{_os.environ.get('WEB_BIND_HOST', '127.0.0.1')}:8099"
+_WEB_HOST = (
+    _os.environ.get("WEB_BIND_HOST")
+    or _os.environ.get("WEB_HOST")
+    or "127.0.0.1"
+)
+_WEB_PORT = _os.environ.get("WEB_PORT") or "8088"
+CONDOR_WEB = f"http://{_WEB_HOST}:{_WEB_PORT}"
 PAIRS = ["BTC-USDT", "XAU-USDT", "CL-USDT"]
 REFRESH_MS = 5_000
 
@@ -57,8 +63,17 @@ def _condor_jwt() -> str:
     if not secret:
         try:
             import yaml
-            cfg = yaml.safe_load(Path("/home/carlito/projects/condor/config.yml").read_text())
-            secret = (cfg.get("web_jwt_secret") or "").strip() or None
+            roots = [
+                _Path(__file__).resolve().parents[3] / "config.yml",
+                _Path.home() / "condor" / "config.yml",
+            ]
+            secret = None
+            for cfg_path in roots:
+                if cfg_path.is_file():
+                    cfg = yaml.safe_load(cfg_path.read_text()) or {}
+                    secret = (cfg.get("web_jwt_secret") or "").strip() or None
+                    if secret:
+                        break
         except Exception as exc:  # noqa: BLE001
             logger.warning("config.yml secret read failed: %s", exc)
             secret = None
@@ -66,9 +81,9 @@ def _condor_jwt() -> str:
         logger.warning("no WEB_JWT_SECRET available")
         return ""
     payload = {
-        "sub": "5587715073",
+        "sub": "gateforum-admin",
         "username": "admin",
-        "first_name": "Carlito",
+        "first_name": "GateForum",
         "role": "admin",
         "exp": int(time.time()) + 3600,
     }
@@ -104,6 +119,30 @@ async def _fetch_condor(path: str) -> "dict | list | None":
         return None
 
 
+async def _condor_server() -> str:
+    """Live Condor server name (this demo is GateForum-Agent, not 'local')."""
+    pinned = (_os.environ.get("GATEFORUM_SERVER_NAME") or "").strip()
+    if pinned:
+        return pinned
+    servers = await _fetch_condor("/api/v1/servers")
+    if isinstance(servers, list) and servers:
+        for s in servers:
+            if isinstance(s, dict) and s.get("is_default"):
+                name = str(s.get("name") or "").strip()
+                if name:
+                    return name
+        name = str((servers[0] or {}).get("name") or "").strip()
+        if name:
+            return name
+    return "GateForum-Agent"
+
+
+@app.get("/health")
+async def health():
+    """Used by gateforum_init to know the floor is up. No secrets."""
+    return {"status": "ok", "debate_server": DEBATE_SERVER, "condor_web": CONDOR_WEB}
+
+
 @app.get("/api/research")
 async def api_research():
     """Sessions, live turns, overall stats ($+%), and per-asset trading stats."""
@@ -117,18 +156,24 @@ async def api_research():
         live[pair] = data.get("turns", [])
 
     # Overall + per-asset trading stats, scoped to GateForum's own venue.
-    stats = await _fetch_condor("/api/v1/servers/local/executors/summary")
+    from urllib.parse import quote as _quote
+
+    server = await _condor_server()
+    s_path = _quote(server, safe="")
+    stats = await _fetch_condor(f"/api/v1/servers/{s_path}/executors/summary")
     stats = stats if isinstance(stats, dict) else {}
-    execs = await _fetch_condor("/api/v1/servers/local/executors?limit=100")
+    execs = await _fetch_condor(f"/api/v1/servers/{s_path}/executors?limit=100")
     execs = execs if isinstance(execs, list) else []
-    portfolio = await _fetch_condor("/api/v1/servers/local/portfolio")
+    portfolio = await _fetch_condor(f"/api/v1/servers/{s_path}/portfolio")
     portfolio = portfolio if isinstance(portfolio, dict) else {}
 
-    # Gate.io perpetual balance only (the % P&L base).
+    # Gate.io perpetual balance only (the % P&L base). Fall back to account total.
     total_value = 0.0
     for c in portfolio.get("connectors", []):
         if c.get("connector") == "gate_io_perpetual":
             total_value += float(c.get("total_usd") or 0.0)
+    if total_value <= 0:
+        total_value = float(portfolio.get("total_usd") or 0.0)
 
     # Aggregate per trading pair — gate_io_perpetual executors only.
     gate_execs = [e for e in execs if e.get("connector") == "gate_io_perpetual"]
