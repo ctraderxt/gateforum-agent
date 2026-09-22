@@ -33,17 +33,39 @@ VENV_PY = CONDOR_ROOT / ".venv" / "bin" / "python"
 UV = REAL_HOME / ".local" / "bin" / "uv"
 AGENT = "gateforum"
 STRATEGY = "gateforum_debate_operator"
-ADMIN_SUB = "gateforum-admin"
+
+
+def _admin_user_id() -> str:
+    """The Condor admin user id, as a numeric string.
+
+    Condor's JWT decode does ``int(payload["sub"])``, so a name like ``gateforum-admin``
+    raises ValueError and every API call made with that token answers 500.
+    """
+    val = (os.getenv("ADMIN_USER_ID") or "").strip()
+    if not val:
+        try:
+            for line in (CONDOR_ROOT / ".env").read_text().splitlines():
+                if line.startswith("ADMIN_USER_ID="):
+                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+        except OSError:
+            pass
+    return val if val.isdigit() else "0"
+
+
+ADMIN_SUB = _admin_user_id()
 WEB_PORT = 8088
 LOG = Path("/tmp/gateforum-heal.log")
 
+# NOTE: keep these in sync with strategy.md's default_config -- they currently disagree
+# (this envelope is much smaller than the strategy declares), so running the healer rewrites
+# the session to different risk limits than the strategy ships with. Pick one as canonical.
 SESSION_CONFIG = {
     "execution_mode": "loop",
     "frequency_sec": 900,
-    "tick_timeout_sec": 600,
+    "tick_timeout_sec": 1500,
     "max_ticks": 0,
     "total_amount_quote": 40,
-    "server_name": "GateForum-Agent",
     "trading_context": "Trade BTC-USDT, XAU-USDT and CL-USDT on gate_io_perpetual",
     "risk_limits": {
         "max_position_size_quote": 48,
@@ -274,7 +296,7 @@ def ensure_session(fixed: list[str]) -> None:
         "POST",
         url + "/start",
         headers=headers,
-        body={"config": SESSION_CONFIG, "chat_id": ADMIN_SUB},
+        body={"config": SESSION_CONFIG, "chat_id": int(ADMIN_SUB)},
         timeout=30,
     )
     if st2 == 200:

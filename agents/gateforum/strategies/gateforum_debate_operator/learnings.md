@@ -1,3 +1,4 @@
+<!-- HISTORICAL RECORD from the author's own box. On current Condor `manage_executors` no longer exists: use `create_position_executor`, `list_executors`, `stop_executor`, `get_executor`. -->
 # Learnings
 
 ## Market Observations

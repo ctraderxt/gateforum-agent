@@ -58,7 +58,10 @@ for s in strats:
     print(f"       context={s.default_trading_context!r}")
 
 # 4. Folder name must equal slugified strategy name.
-from condor.agents.strategy import _slugify
+try:
+    from condor.agents.strategy import _slugify
+except ImportError:  # newer Condor exports it as slugify
+    from condor.agents.strategy import slugify as _slugify
 for s in strats:
     exp = _slugify(s.name)
     d = (REPO / "agents/gateforum/strategies" / exp).is_dir()

@@ -33,7 +33,7 @@ class Config(BaseModel):
         default="http://127.0.0.1:8500", description="GateForum research server base URL"
     )
     research_timeout_seconds: int = Field(
-        default=300, description="Per-pair research timeout (2-round hy3 research takes ~3-4 min)"
+        default=900, description="Per-pair research timeout (2-round hy3 research takes ~3-4 min)"
     )
     max_retries: int = Field(default=1, description="Retries per pair on failure")
     min_confidence: int = Field(
@@ -165,6 +165,67 @@ async def _load_packet(pair: str) -> dict:
         return {}
 
 
+# The research server rate-limits GLOBALLY (one LAST_RESEARCH_AT), so concurrent
+# pair requests get 429 and are discarded. Serialize them.
+_POST_LOCK = asyncio.Lock()
+
+
+# How old a council verdict may be and still be used. The server stores every
+# completed cycle, and a tick's research call keeps running to completion in the
+# background even when the platform stops waiting for it — so the previous tick's
+# verdicts are normally here, one tick old at most.
+_SERVER_VERDICT_FRESH_SECONDS = 1500
+_SERVER_VERDICT_CACHE: dict = {}
+
+
+async def _server_verdict(session, pair: str, cfg: Config) -> dict | None:
+    """The newest completed council verdict for ``pair``, if it is fresh enough."""
+    import time as _time
+
+    cache = _SERVER_VERDICT_CACHE
+    if cache.get("server") != cfg.server_url or _time.time() - cache.get("at", 0) > 30:
+        try:
+            async with session.get(f"{cfg.server_url}/sessions", timeout=15) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
+        except Exception:  # noqa: BLE001
+            return None
+
+        from datetime import datetime, timezone
+
+        by_pair: dict = {}
+        # The server starts a NEW session whenever the gap between cycles is quiet,
+        # so three pairs are usually three sessions. Scan newest-first and keep the
+        # first (newest) verdict seen for each pair.
+        for sess in reversed(data.get("sessions") or []):
+            started = sess.get("started_at") or ""
+            age = None
+            try:
+                ts = datetime.fromisoformat(started.replace("Z", "+00:00"))
+                if ts.tzinfo:
+                    age = _time.time() - ts.timestamp()
+            except Exception:  # noqa: BLE001
+                age = None
+            for entry in (sess.get("research") or []):
+                name = str(entry.get("pair", "")).upper()
+                if name and name not in by_pair:
+                    by_pair[name] = {"age": age, "entry": entry}
+        cache.update(server=cfg.server_url, at=_time.time(), by_pair=by_pair)
+
+    hit = (cache.get("by_pair") or {}).get(pair.upper())
+    if not hit:
+        return None
+    age = hit.get("age")
+    if age is not None and age > _SERVER_VERDICT_FRESH_SECONDS:
+        return None
+    record = _normalise(hit["entry"], pair)
+    record["status"] = "ok"
+    record["source"] = "server_session"
+    record["verdict_age_seconds"] = int(age or 0)
+    return record
+
+
 async def _research_pair(session, pair: str, cfg: Config) -> dict:
     packet = await _load_packet(pair)
     if not packet.get("market_data"):
@@ -186,10 +247,14 @@ async def _research_pair(session, pair: str, cfg: Config) -> dict:
         "social_data": packet.get("sentiment", ""),
     }
 
+    fresh = await _server_verdict(session, pair, cfg)
+    if fresh is not None:
+        return fresh
+
     last_error = None
     for attempt in range(cfg.max_retries + 1):
         try:
-            async with session.post(
+            async with _POST_LOCK, session.post(
                 f"{cfg.server_url}/research", json=body, timeout=cfg.research_timeout_seconds
             ) as resp:
                 if resp.status == 429:

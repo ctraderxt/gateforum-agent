@@ -23,10 +23,10 @@ pair_aliases:
 # Default: WSL Claude Code email login (claude -p). No API key.
 # Set GATEFORUM_LLM_PROVIDER=opencode-go to fall back to the OpenAI-compatible path.
 llm:
-  provider: "claude-cli"
-  model: "sonnet"
-  backend_url: "https://opencode.ai/zen/go/v1"
-  api_key_env: "CUSTOM_LLM_API_KEY"
+  provider: "openai"
+  model: "deepseek/deepseek-v4.1-flash"
+  backend_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"
   temperature: 0.3
   request_timeout_seconds: 90
   max_tokens: 4000
@@ -55,4 +55,4 @@ confidence:
 server:
   host: "127.0.0.1"
   port: 8500
-  rate_limit_seconds: 180       # min seconds between research cycles per pair
+  rate_limit_seconds: 30       # min seconds between research cycles per pair

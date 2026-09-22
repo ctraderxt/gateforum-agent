@@ -3,11 +3,14 @@ name: GateForum
 description: Multi-agent research & decision trader — twelve specialised LLM agents research
   every trade (four analysts, adversarial bull vs bear analysis, a research judge, then a
   three-way risk analysis) before a directional position is opened on perps.
-agent_key: claude-acp:sonnet
+agent_key: null   # inherit the host default agent; set "<provider>:<model>" to pin one
 tools:
 - get_market_data
 - get_portfolio_overview
-- manage_executors
+- create_position_executor
+- list_executors
+- stop_executor
+- get_executor
 - manage_routines
 - manage_memory
 - trading_agent_journal_read
@@ -17,7 +20,6 @@ when_to_consult: When the user wants a reasoned directional view on BTC, gold (X
   crude (CL) perps and wants to see the argument behind it — the bull case, the bear case,
   and the risk ruling — rather than a bare signal.
 server_required: true
-server_name: GateForum-Agent
 created_by: 0
 created_at: '2026-08-15T00:00:00+00:00'
 ---

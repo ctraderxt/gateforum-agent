@@ -10,6 +10,7 @@ skills: []
 default_config:
   frequency_sec: 900
   execution_mode: loop
+  tick_timeout_sec: 1500
   total_amount_quote: 800
   risk_limits:
     max_position_size_quote: 96
@@ -177,28 +178,39 @@ Sizing — conviction drives size, drawdown scales it down:
 Never exceed 20% of balance on one position or 40% as total margin. Apply the drawdown
 multiplier from the table above (half size at 4–8%, quarter size above 8%).
 
-Open with `manage_executors`. Fetch the schema first, then create — the risk gate
-REQUIRES `total_amount_quote` (quote notional) on every position; a base-only
-`amount` is refused because it cannot be risk-checked against the position cap:
+Floor the size to the venue's contract grid before you open. Perps trade in whole
+contracts, so `amount` must be a whole multiple of the pair's `quanto_multiplier` and the
+resulting notional must clear the venue's `min_notional_size` -- read the trading rules for the
+pair once, then round DOWN. A size the exchange cannot represent is silently clipped, which
+leaves the executor's `amount` and the real position disagreeing.
+
+Open with `create_position_executor`. Size from the live balance, clear the venue
+minimum, and stay under `max_position_size_quote` — the risk gate refuses anything
+under- or over-sized:
 
 ```
-manage_executors(
+create_position_executor(
   executor_type="position_executor",
   connector_name=<connector_name>,
   trading_pair=<pair>,
   side=1 if LONG else 2,
-  total_amount_quote=<notional_usd>,       # REQUIRED — quote notional ($)
-  amount=<notional_usd / entry_price>,     # base currency, NOT quote
+  amount=<notional_usd / entry_price>,   # REQUIRED - BASE currency, NOT quote
   leverage=2,
-  triple_barrier_config={
-    "stop_loss": 0.02,
-    "take_profit": 0.04,
-    "time_limit": 3600,
-    "trailing_stop": {"activation_price": 0.01, "trailing_delta": 0.02},
-    "open_order_type": 1
-  }
+  entry_price=<limit price>,             # optional
+  stop_loss=0.02,
+  take_profit=0.04,
+  time_limit=3600,
+  trailing_stop_activation_price=0.01,
+  trailing_stop_trailing_delta=0.02,
+  open_order_type=1
 )
 ```
+
+Call shape notes: the barrier fields are **flat parameters** — the engine rebuilds the
+nested `triple_barrier_config` itself, so never send it as an object. `amount` is in
+**BASE currency** (quote notional ÷ entry price). `total_amount_quote` is **not** a
+position-executor field.
+
 
 For drawdown or duty trades, shrink `amount` per the tables and shorten `time_limit` to
 600–900 seconds so the position round-trips in minutes.

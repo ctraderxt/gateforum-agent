@@ -80,8 +80,27 @@ def _condor_jwt() -> str:
     if not secret:
         logger.warning("no WEB_JWT_SECRET available")
         return ""
+    user_id = (os.getenv("ADMIN_USER_ID") or "").strip()
+    if not user_id:
+        for env_path in (
+            _Path(__file__).resolve().parents[3] / ".env",
+            _Path.home() / "condor" / ".env",
+        ):
+            try:
+                for line in env_path.read_text().splitlines():
+                    if line.startswith("ADMIN_USER_ID="):
+                        user_id = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        break
+            except Exception:  # noqa: BLE001
+                pass
+            if user_id:
+                break
+    try:
+        _uid = int(user_id)
+    except (TypeError, ValueError):
+        _uid = 0
     payload = {
-        "sub": "gateforum-admin",
+        "sub": str(_uid),
         "username": "admin",
         "first_name": "GateForum",
         "role": "admin",
