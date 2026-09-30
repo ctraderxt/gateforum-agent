@@ -13,7 +13,7 @@ default_config:
   tick_timeout_sec: 1500
   total_amount_quote: 800
   risk_limits:
-    max_position_size_quote: 96
+    max_position_size_quote: 320
     max_open_executors: 3
     max_drawdown_pct: 8
     max_leverage: 2
@@ -88,7 +88,7 @@ without risking meaningful capital. Never increase size while in drawdown. If th
 gate refuses an entry, journal it and keep the tick alive — do not treat it as a stop.
 
 **Enforcement note:** the risk gate (strategy `risk_limits`) enforces at the platform
-level — max 3 executors, max $96 position, 8% drawdown pause, max 2x leverage, and
+level — max 3 executors, max $320 TOTAL open exposure across all positions (not per-position — size within that against the 8/12/16% tiers), 8% drawdown pause, max 2x leverage, and
 every position MUST carry a full triple barrier (stop_loss ≤10%, take_profit ≤50%,
 time_limit 60s–48h, valid trailing stop). The LLM cannot open an unprotected or
 over-leveraged position even if it tries; a blocked create is refused by the engine,
