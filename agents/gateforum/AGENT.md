@@ -133,7 +133,7 @@ This WSL demo box has **no systemd condor-bot**. The stack is kept up by
 | **Access** | loopback only on this box (`127.0.0.1`) |
 
 Logs: `/tmp/gateforum-heal.log` · `/tmp/gateforum-condor.log` · `server/gateforum_*.log` ·
-session journals under `strategies/gateforum_debate_operator/sessions/`.
+session journals under `loops/gateforum_debate_operator/sessions/`.
 
 **Call shape (non-negotiable):** `controller_id` goes **inside** `executor_config`.
 The risk gate ignores a top-level id and cancels the create.

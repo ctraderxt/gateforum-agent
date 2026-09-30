@@ -64,7 +64,7 @@ except ImportError:  # newer Condor exports it as slugify
     from condor.agents.strategy import slugify as _slugify
 for s in strats:
     exp = _slugify(s.name)
-    d = (REPO / "agents/gateforum/strategies" / exp).is_dir()
+    d = (REPO / "agents/gateforum/loops" / exp).is_dir()
     ok &= d
     print(f"  [{'OK' if d else 'FAIL'}] folder '{exp}' matches slugified name")
 
