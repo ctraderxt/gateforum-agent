@@ -22,8 +22,8 @@ def test_split_sums_800():
     assert s["volume_arm_usd"] == 520
     assert s["pnl_arm_usd"] == 280
     assert s["pnl_stop_loss_usd"] == 100
-    assert s["volume_pair"] == "USD1-USDC"
-    assert s["volume_pair_fallback"] == "USD1-USDT"
+    assert s["volume_pair"] == "USD1-USDT"
+    assert s["volume_pair_fallback"] == "FDUSD-USDT"
     assert "split-book" in s["organizer_blurb"].lower()
     assert "split-book" in s["organizer_blurb"].lower()
 

@@ -22,8 +22,8 @@ with the deficit-based CATCHUP state this makes the pace target close to a
 floor rather than a target.
 
 Capital note (split-book): ~65% / ~$520 of the $800 entry on this Binance desk;
-~$280 USDT stays on Gate.io for the debate P&L sleeve. Primary pair USD1-USDC;
-fallback USD1-USDT if the primary book is unusable. P&L-sleeve stop ($100 USDT)
+~$280 USDT stays on Gate.io for the debate P&L sleeve. Primary pair USD1-USDT;
+fallback FDUSD-USDT if the primary book is unusable. P&L-sleeve stop ($100 USDT)
 is enforced on the GateForum loop, not here. Split-book volume sleeve only.
 """
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
@@ -52,8 +52,8 @@ class GfPegMakerConfig(ControllerConfigBase):
     controller_name: str = "gf_peg_maker"
 
     connector_name: str = Field("binance")
-    trading_pair: str = Field("USD1-USDC", description="Primary zero-fee stable pair.")
-    fallback_pair: str = Field("USD1-USDT", description="Failover if primary book is dead/off-peg.")
+    trading_pair: str = Field("USD1-USDT", description="Primary zero-fee stable pair.")
+    fallback_pair: str = Field("FDUSD-USDT", description="Failover if primary book is dead/off-peg.")
     use_pair_fallback: bool = Field(True, json_schema_extra={"is_updatable": True})
 
     pace_target_usd: Decimal = Field(Decimal("1500000"), json_schema_extra={"is_updatable": True})
@@ -137,7 +137,7 @@ class GfPegMakerController(ControllerBase):
             return False
 
     def _ensure_pair(self) -> None:
-        """Prefer USD1-USDC; fall over to USD1-USDT when primary cannot trade."""
+        """Prefer USD1-USDT; fall over to FDUSD-USDT when primary cannot trade."""
         c = self.config
         if not getattr(c, "use_pair_fallback", True):
             return

@@ -82,10 +82,17 @@ a one-line config change with zero code change.
 
 ## Split-book race framing ($800)
 
-- **Volume sleeve $520 (65%)** — Binance `gf_peg_maker`, primary **USD1-USDC**, fallback **USD1-USDT**.
+- **Volume sleeve $520 (65%)** — Binance `gf_peg_maker`, primary **USD1-USDT**, fallback **FDUSD-USDT**.
 - **P&L sleeve $280 (35%)** — Gate.io perps council (XRP / XAG / CL).
 - **P&L-sleeve stop $100 USDT** absolute NAV loss — flatten; not a split-book label.
 - Size with `routines/_gateforum_alloc.size_order` so venue mins cannot permanent-skip.
+
+**Why Binance stable, not perps, for volume:** earlier passes tried generating
+turnover directly on the perp council itself — larger size, higher leverage — but
+every configuration that moved enough notional to matter also scaled up potential
+loss on the P&L sleeve it was supposed to protect. A zero-fee Binance stable pair
+(USD1-USDT) decouples volume from directional risk entirely, which is what makes
+it the only option left standing for staying competitive on turnover.
 
 ## Risk philosophy (non-negotiable)
 

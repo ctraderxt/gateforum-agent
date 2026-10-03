@@ -2,8 +2,8 @@ id: gf_peg_maker
 controller_name: gf_peg_maker
 controller_type: generic
 connector_name: binance
-trading_pair: USD1-USDC
-fallback_pair: USD1-USDT
+trading_pair: USD1-USDT
+fallback_pair: FDUSD-USDT
 use_pair_fallback: true
 pace_target_usd: 1500000
 pace_window_s: 172800

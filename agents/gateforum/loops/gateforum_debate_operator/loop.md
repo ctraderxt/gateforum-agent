@@ -27,9 +27,9 @@ default_config:
   pnl_arm_usd: 280
   race_envelope_usd: 800
   volume_controller: gf_peg_maker
-  volume_pair: USD1-USDC
-  volume_pair_fallback: USD1-USDT
-default_trading_context: 'Trade XRP-USDT, XAG-USDT and CL-USDT on gate_io_perpetual. P&L sleeve $280 USDT (stop $100). Volume sleeve $520 is gf_peg_maker on Binance USD1-USDC (fallback USD1-USDT) — not this loop. Size via _gateforum_alloc.'
+  volume_pair: USD1-USDT
+  volume_pair_fallback: FDUSD-USDT
+default_trading_context: 'Trade XRP-USDT, XAG-USDT and CL-USDT on gate_io_perpetual. P&L sleeve $280 USDT (stop $100). Volume sleeve $520 is gf_peg_maker on Binance USD1-USDT (fallback FDUSD-USDT) — not this loop. Size via _gateforum_alloc.'
 created_by: 0
 created_at: '2026-08-15T00:00:00+00:00'
 ---
@@ -114,7 +114,7 @@ not by the playbook.
 
 | Sleeve | USD | Venue | Component |
 |---|---|---|---|
-| **Volume** | **$520 (65%)** | Binance USD1-USDC → USD1-USDT | `gf_peg_maker` |
+| **Volume** | **$520 (65%)** | Binance USD1-USDT → FDUSD-USDT | `gf_peg_maker` |
 | **P&L** | **$280 (35%)** | Gate.io perps XRP/XAG/CL | this loop |
 | **P&L stop** | **$100 USDT** | sleeve NAV | `pnl_stop_loss_usd` |
 | **Total** | **$800** | two venues | split-book |

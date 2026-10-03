@@ -10,8 +10,8 @@ GateForum is a **12-role research council** on Gate.io USDT perps with a separat
 
 ## Volume pair
 
-1. **Primary:** `USD1-USDC`
-2. **Fallback:** `USD1-USDT` if primary book is missing, halted, or off-peg
+1. **Primary:** `USD1-USDT`
+2. **Fallback:** `FDUSD-USDT` if primary book is missing, halted, or off-peg
 
 Sample: `conf/gf_peg_maker.sample.yml`.
 

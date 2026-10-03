@@ -25,5 +25,5 @@ volume_arm_usd: 520
 pnl_arm_usd: 280
 race_envelope_usd: 800
 volume_controller: gf_peg_maker
-volume_pair: USD1-USDC
-volume_pair_fallback: USD1-USDT
+volume_pair: USD1-USDT
+volume_pair_fallback: FDUSD-USDT

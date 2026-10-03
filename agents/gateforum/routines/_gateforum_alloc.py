@@ -1,6 +1,6 @@
 """GateForum split-book capital ($800 Cup entry).
 
-Volume sleeve = Binance gf_peg_maker (USD1-USDC, fallback USD1-USDT).
+Volume sleeve = Binance gf_peg_maker (USD1-USDT, fallback FDUSD-USDT).
 P&L sleeve   = Gate.io perps debate operator (this agent).
 
 GateForum is **split-book**: two funded sleeves, no auto-transfer between them.
@@ -17,8 +17,8 @@ PNL_ARM_PCT = PNL_ARM_USD / RACE_ENVELOPE_USD
 PNL_STOP_LOSS_USD = 100.0
 
 VOLUME_CONTROLLER = "gf_peg_maker"
-VOLUME_PAIR = "USD1-USDC"
-VOLUME_PAIR_FALLBACK = "USD1-USDT"
+VOLUME_PAIR = "USD1-USDT"
+VOLUME_PAIR_FALLBACK = "FDUSD-USDT"
 PNL_LOOP = "gateforum_debate_operator"
 
 # Default conviction → notional % of *P&L sleeve free balance* (before DD scale).
