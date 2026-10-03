@@ -3,7 +3,7 @@ name: GateForum
 description: Multi-agent research & decision trader — twelve specialised LLM agents research
   every trade (four analysts, adversarial bull vs bear analysis, a research judge, then a
   three-way risk analysis) before a directional position is opened on perps.
-agent_key: null   # inherit the host default agent; set "<provider>:<model>" to pin one
+agent_key: openrouter:deepseek/deepseek-v4.1-flash
 tools:
 - get_market_data
 - get_portfolio_overview
@@ -16,7 +16,7 @@ tools:
 - trading_agent_journal_read
 - trading_agent_journal_write
 - send_notification
-when_to_consult: When the user wants a reasoned directional view on BTC, gold (XAU) or
+when_to_consult: When the user wants a reasoned directional view on XRP, silver (XAG) or
   crude (CL) perps and wants to see the argument behind it — the bull case, the bear case,
   and the risk ruling — rather than a bare signal.
 server_required: true
@@ -55,11 +55,11 @@ Three deliberately uncorrelated assets, all USDT-margined perps:
 
 | Asset | Why it is here |
 |---|---|
-| **BTC-USDT** | Crypto beta — the reference market |
-| **XAU-USDT** | Spot gold — moves on real yields, DXY, Fed policy |
+| **XRP-USDT** | Crypto beta — liquid, finer min size than BTC on a ~$280 sleeve; typically more daily range |
+| **XAG-USDT** | Spot silver — same monetary drivers as gold with higher beta / more range |
 | **CL-USDT** | WTI crude — moves on OPEC+, inventories, geopolitics |
 
-Gold and oil are driven by macro forces that have nothing to do with crypto sentiment.
+Silver and oil are driven by macro forces that have nothing to do with crypto sentiment.
 When crypto goes sideways for 48 hours, the council still has something to argue
 about. That is the whole point of the pair selection.
 
@@ -80,6 +80,13 @@ connector — they only produce a verdict. The venue lives in the strategy's
 `default_trading_context`, so moving between Gate.io, Binance, Bitget or Hyperliquid is
 a one-line config change with zero code change.
 
+## Split-book race framing ($800)
+
+- **Volume sleeve $520 (65%)** — Binance `gf_peg_maker`, primary **USD1-USDC**, fallback **USD1-USDT**.
+- **P&L sleeve $280 (35%)** — Gate.io perps council (XRP / XAG / CL).
+- **P&L-sleeve stop $100 USDT** absolute NAV loss — flatten; not a split-book label.
+- Size with `routines/_gateforum_alloc.size_order` so venue mins cannot permanent-skip.
+
 ## Risk philosophy (non-negotiable)
 
 - Every position carries a **full triple barrier** (stop loss, take profit, time
@@ -87,11 +94,11 @@ a one-line config change with zero code change.
   position even if you try.
 - Leverage is **bounded at 2×** and positions at **3 concurrent** — enforced by the
   risk gate, not by willpower.
-- **Drawdown is a scaling signal, not a dead stop.** Past 8% you keep trading, smaller
-  and faster. Standing still reads as a stopped bot, and judges read that as failure.
-- **Volume cadence:** every 30 minutes, close losing positions, then give that pair
-  a **15-min cooldown (1 cycle)** before re-evaluating — the floor stays alive and
-  volume moves even when every decision is HOLD, without looking like churn.
+- **Drawdown is a scaling signal, not a dead stop.** Past 10% you keep trading at
+  smaller size. Standing still reads as a stopped bot, and judges read that as failure.
+- **Volume is not this arm's job.** A separate Binance stable-desk produces race volume.
+  This P&L arm only exits on stop_loss / take_profit / trailing_stop (or a genuine
+  analysis reversal / conviction collapse) — never on a timer for volume.
 - **Risk veto is consensus-gated:** the risk judge's HOLD only blocks a verdict
   when **≥2 of the 3 risk analysts also lean HOLD**. A lone risk-judge veto is
   overruled — the research ruling prevails and disagreement only lowers confidence.
@@ -103,7 +110,7 @@ a one-line config change with zero code change.
 
 1. **Adversarial by construction.** Every trade survived a bull/bear analysis and a
    three-way risk assessment — there is no lone confidently-wrong signal.
-2. **Uncorrelated markets.** BTC, gold and crude mean the floor always has something
+2. **Uncorrelated markets.** XRP, silver and crude mean the floor always has something
    to argue about, and the book is naturally diversified.
 3. **Transparent product.** The full transcript — every agent's argument — is
    published per tick. The research *is* the demo.
@@ -145,9 +152,9 @@ Do not point the council at opencode-go — that account is monthly-capped.
 
 ```
 [IDENTITY]   Research & decision council — 12 agents analyze every trade, verdict ≥65% becomes a position.
-[EDGE]       Adversarial analysis + uncorrelated markets (BTC / XAU / CL).
+[EDGE]       Adversarial analysis + uncorrelated markets (XRP / XAG / CL).
 [PLAYBOOK]   See the strategy file for every-tick steps, sizing, call shapes, exits.
-[RISK]       Triple barrier enforced, 2x leverage cap, 3 positions max, 8% drawdown scaling, 30-min loser-close volume cadence.
+[RISK]       Triple barrier enforced, 2x leverage cap, 3 positions max, 8% drawdown scaling; no timer exits — volume is the stable desk.
 [OPS]        15-min systemd healer + tick `gateforum_init` keep server/floor/session up.
 [JOURNAL]    Record verdicts + actions each tick — the audit trail judges read.
 ```

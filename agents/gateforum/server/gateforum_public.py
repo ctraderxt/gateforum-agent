@@ -36,7 +36,7 @@ _WEB_HOST = (
 )
 _WEB_PORT = _os.environ.get("WEB_PORT") or "8088"
 CONDOR_WEB = f"http://{_WEB_HOST}:{_WEB_PORT}"
-PAIRS = ["BTC-USDT", "XAU-USDT", "CL-USDT"]
+PAIRS = ["XRP-USDT", "XAG-USDT", "CL-USDT"]
 REFRESH_MS = 5_000
 
 app = FastAPI(title="GateForum — Public Research & Decision Floor", version="1.3.0")
@@ -319,7 +319,7 @@ PAGE = """<!doctype html>
 <script>
 const ESC = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtTime = ts => { try { return new Date(ts).toLocaleString(); } catch { return ''; } };
-const ORDER = ['BTC-USDT', 'XAU-USDT', 'CL-USDT'];
+const ORDER = ['XRP-USDT', 'XAG-USDT', 'CL-USDT'];
 
 async function load() {
   try {

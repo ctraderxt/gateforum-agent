@@ -29,16 +29,17 @@ logger = logging.getLogger("gateforum.engine")
 
 CONFIG_PATH = Path(__file__).resolve().parent / "gateforum_config.yaml"
 _ASSET_CONTEXT: dict[str, str] = {
-    "BTC": "BTC is crypto's reference market — driven by macro liquidity, ETF flows and risk sentiment.",
-    "XAU": "XAU is spot gold quoted in USDT — driven by real yields, the US dollar and safe-haven flow, NOT crypto sentiment.",
+    "XRP": "XRP is a high-liquidity crypto beta leg — driven by risk sentiment, ETF/flow news, and crypto-wide liquidity. Finer contract size than BTC on a small sleeve.",
+    "XAG": "XAG is spot silver quoted in USDT — monetary drivers like gold plus higher industrial beta; typically more range than gold. NOT crypto sentiment.",
     "CL": "CL is WTI crude oil quoted in USDT — driven by OPEC+ supply policy, inventories and geopolitics, NOT crypto sentiment.",
-    "XAG": "XAG is spot silver — monetary drivers like gold plus higher industrial beta.",
+    "XAU": "XAU is spot gold quoted in USDT — driven by real yields, the US dollar and safe-haven flow, NOT crypto sentiment.",
+    "BTC": "BTC is crypto's reference market — driven by macro liquidity, ETF flows and risk sentiment.",
 }
 
 
 @dataclass
 class EngineConfig:
-    pairs: list[str] = field(default_factory=lambda: ["BTC-USDT", "XAU-USDT", "CL-USDT"])
+    pairs: list[str] = field(default_factory=lambda: ["XRP-USDT", "XAG-USDT", "CL-USDT"])
     aliases: dict[str, str] = field(default_factory=dict)
     provider: str = "claude-cli"
     model: str = "sonnet"
@@ -246,8 +247,9 @@ def _mock_reply(system: str, user: str, cfg: EngineConfig) -> str:
     pair = "the asset"
     for tok in ("btc", "xau", "cl", "xag", "gold", "oil"):
         if tok in user.lower():
-            pair = {"btc": "BTC", "xau": "gold (XAU)", "cl": "WTI crude (CL)",
-                    "xag": "silver (XAG)", "gold": "gold (XAU)", "oil": "WTI crude (CL)"}.get(tok, pair)
+            pair = {"xrp": "XRP", "xag": "silver (XAG)", "cl": "WTI crude (CL)",
+                    "btc": "XRP", "xau": "silver (XAG)", "gold": "silver (XAG)", "oil": "WTI crude (CL)",
+                    "silver": "silver (XAG)"}.get(tok, pair)
             break
 
     if "market analyst" in sys_l:

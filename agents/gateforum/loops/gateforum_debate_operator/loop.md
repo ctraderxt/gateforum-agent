@@ -4,22 +4,32 @@ description: >-
   Runs the research & decision loop - refresh data, convene the analysis council,
   then open and manage directional perp positions from verdicts that clear the
   confidence floor. Competition-tuned: 2x leverage, modest sizing, drawdown-scaling
-  instead of a hard stop, and a 30-min loser-close cadence for volume.
+  instead of a hard stop. Volume is handled by a separate dedicated desk, so this
+  loop no longer force-closes positions on a timer — only stop_loss/trailing_stop
+  (or a genuine analysis reversal) close a position. Patient P&L sleeve on $280 of the $800 split-book (Binance volume sleeve holds $520).
 agent_key: null
 skills: []
 default_config:
   frequency_sec: 900
   execution_mode: loop
   tick_timeout_sec: 1500
-  total_amount_quote: 800
+  total_amount_quote: 280
   risk_limits:
-    max_position_size_quote: 320
+    max_position_size_quote: 120
     max_open_executors: 3
-    max_drawdown_pct: 8
+    max_drawdown_pct: 36
+    # Absolute P&L-sleeve stop = $100 USDT (~36% of $280). Hard flatten, split-book sleeve stop.
+    pnl_stop_loss_usd: 100
     max_leverage: 2
     require_triple_barrier: true
     require_trailing_stop: true
-default_trading_context: 'Trade BTC-USDT, XAU-USDT and CL-USDT on gate_io_perpetual'
+  volume_arm_usd: 520
+  pnl_arm_usd: 280
+  race_envelope_usd: 800
+  volume_controller: gf_peg_maker
+  volume_pair: USD1-USDC
+  volume_pair_fallback: USD1-USDT
+default_trading_context: 'Trade XRP-USDT, XAG-USDT and CL-USDT on gate_io_perpetual. P&L sleeve $280 USDT (stop $100). Volume sleeve $520 is gf_peg_maker on Binance USD1-USDC (fallback USD1-USDT) — not this loop. Size via _gateforum_alloc.'
 created_by: 0
 created_at: '2026-08-15T00:00:00+00:00'
 ---
@@ -33,8 +43,8 @@ created_at: '2026-08-15T00:00:00+00:00'
 
 Each tick: refresh the data, convene the research & analysis council, act only on
 verdicts that earned it.
-Goal in the 48h race: **protect the $800 while producing real volume** — the judges
-score Volume + P&L, and the capital left at the end is what the participant keeps.
+Goal in the 48h race: **protect P&L on the ~$280 directional sleeve** — volume is
+produced by the separate stable desk, not by timer-closing losers here.
 
 Read `connector_name` from `[CURRENT CONFIG]` or `trading_context`. Default is
 `gate_io_perpetual`. Never hardcode a venue in a routine.
@@ -70,69 +80,61 @@ only a real analyst consensus may block one.
 **4 — Portfolio.** `get_portfolio_overview(connector=<connector_name>)` for balance and
 open positions. Compute current **drawdown % = (peak_balance − balance) / peak_balance**.
 
-## Drawdown response (NOT a hard stop)
+## Drawdown response + hard sleeve stop
 
-The engine's `max_drawdown_pct` risk gate blocks NEW entries when drawdown crosses the
-threshold. We do not want a dead bot that just sits there — that reads as a stop, not
-a strategy. Instead, treat **8% drawdown as the "reduce" trigger**:
+**Hard stop:** if P&L-sleeve NAV is down **$100 USDT** from session entry NAV, flatten
+all Gate.io positions this tick (`KILL_PORTFOLIO` / stop executors) and do not re-arm
+without an operator. Basis is the **$280 P&L sleeve**, not the $800 tape budget.
+Code: `routines/_gateforum_alloc.portfolio_stop_usd` · config `pnl_stop_loss_usd: 100`.
+
+**Before that ceiling**, drawdown still **scales size down** so the bot is not dead:
 
 | Drawdown | Position size | Time limit | Behavior |
 |---|---|---|---|
-| **0–4%** | normal (12% of balance) | 1h barrier | trade verdicts at full size |
-| **4–8%** | half size (6% of balance) | 1h barrier | trade verdicts at half size |
-| **>8%** | quarter size (3% of balance) | **10–15 min** quick round-trip | keep trading, tiny size, fast close |
+| **0–4%** | normal (12% of P&L-arm balance) | 48h ceiling | trade verdicts at full size |
+| **4–8%** | half size (6% of balance) | 48h ceiling | trade verdicts at half size |
+| **>10%** (and loss still **<$100**) | quarter size | 48h ceiling | keep trading tiny; hard stop only at **−$100 USDT** |
 
-At >8% drawdown: still open small positions on the highest-confidence verdict and let
-the short time limit close them quickly. The point is to stay active and recover volume
-without risking meaningful capital. Never increase size while in drawdown. If the risk
-gate refuses an entry, journal it and keep the tick alive — do not treat it as a stop.
+At >10% drawdown: still open small positions on the highest-confidence verdict, sized
+down, and let stop_loss / trailing_stop close them naturally — do not force an early
+time-based exit. The point is to stay capital-protective, not to manufacture activity.
+Never increase size while in drawdown. If the risk gate refuses an entry, journal it
+and keep the tick alive — do not treat it as a stop.
 
 **Enforcement note:** the risk gate (strategy `risk_limits`) enforces at the platform
-level — max 3 executors, max $320 TOTAL open exposure across all positions (not per-position — size within that against the 8/12/16% tiers), 8% drawdown pause, max 2x leverage, and
+level — max 3 executors, max $120 TOTAL open exposure across all positions (not per-position — size within that against the 8/12/16% tiers on the ~$280 P&L sleeve), 10% drawdown pause, max 2x leverage, and
 every position MUST carry a full triple barrier (stop_loss ≤10%, take_profit ≤50%,
 time_limit 60s–48h, valid trailing stop). The LLM cannot open an unprotected or
 over-leveraged position even if it tries; a blocked create is refused by the engine,
 not by the playbook.
 
-## Volume cadence (30-min: close losers, 15-min cooldown, re-evaluate)
+## Volume sleeve (handled elsewhere)
 
-Judges see Volume, and a single held position registers only one open + one close.
-At 15-min ticks, use the **30-minute mark (every 2nd tick)** as the loser-close
-cadence:
+## Split-book capital ($800)
 
-- **Close any open position that is in NEGATIVE unrealized P&L** at the 30-min mark.
-  Realizing a small loss deliberately: (1) adds a close to the volume ledger,
-  (2) stops a loser from running toward its 1h time limit, (3) frees the slot for a
-  fresh verdict. This is active risk management — **cutting losers, running
-  winners** — not churn.
-- **Do NOT close winners at the 30-min mark** — their take-profit / trailing barrier
-  does the work. Only losers get force-closed.
-- **After a loser-close, the pair enters a 15-MINUTE COOLDOWN (1 cycle at the
-  15-min cadence).** Do NOT re-enter that pair during the cooldown — even if a fresh
-  verdict is actionable, even if it says the same direction. Closing a loser and
-  instantly re-opening the same pair (same or opposite side) reads as churn/wash
-  trading, not management. Journal the cooldown deadline (close time + 15 min) so
-  you can check it on the next tick.
-- **After the cooldown elapses, evaluate the pair again via the normal trade-session
-  flow** — the MUST-OPEN rule applies to it like any other pair. Re-entry must be
-  driven by a fresh verdict ≥65%, never by "we just closed, open again".
-- **Cost check:** at ~$8 notional a close+reopen costs ~2 × 0.05% ≈ **$0.008** —
-  negligible against the ~$16 of volume it registers. At race scale ($96 positions)
-  ≈ $0.10 per round trip for ~$192 of volume — worth it. Never churn faster than
-  every 30 minutes; the cost is only acceptable at this frequency.
+| Sleeve | USD | Venue | Component |
+|---|---|---|---|
+| **Volume** | **$520 (65%)** | Binance USD1-USDC → USD1-USDT | `gf_peg_maker` |
+| **P&L** | **$280 (35%)** | Gate.io perps XRP/XAG/CL | this loop |
+| **P&L stop** | **$100 USDT** | sleeve NAV | `pnl_stop_loss_usd` |
+| **Total** | **$800** | two venues | split-book |
 
-If the analysis is ambiguous at the 30-min mark (no actionable verdict), the loser
-close still happens (volume + risk) and the pair enters the 15-min cooldown — do
-not force a re-entry against the analysis or during the cooldown.
+Volume is generated by the Binance stable desk, not by this strategy. **This loop does not force-close positions for volume anymore.** A
+position stays open until its own barrier closes it (stop_loss, take_profit, or
+trailing_stop) or a genuine analysis-driven reason fires (reversal, conviction
+collapse — see Position management below). Do not re-introduce a timer-based close;
+if a position is sitting flat or mildly negative, that is normal — let the barrier
+do its job.
 
 ## Position management
 
 **5 — Manage what is open.** Positions carry their own triple barrier, so intervene only
-on analysis-driven grounds:
-- **Reversal** — the council flips direction on an open pair with confidence ≥75%:
-  close it, then re-enter the other way next tick. Do not flip and re-open in one tick.
+on analysis-driven grounds (these are allowed exits alongside SL/TP/trailing):
+- **Council decision changed / Reversal** — the council flips direction on an open pair
+  with confidence ≥75%: close it, then re-enter the other way next tick. Do not flip and
+  re-open in one tick.
 - **Conviction collapse** — verdict moves to HOLD and confidence drops below 50%: close.
-- Otherwise leave the barrier to do its job. Do not micromanage.
+- Otherwise leave the barrier to do its job. Do not micromanage. No timer-based closes.
 
 **6 — Open new positions.** Only where `Actionable = YES` (BUY/SELL, confidence ≥65%).
 Rank by confidence, respect **max 3 concurrent positions**, skip pairs already open.
@@ -140,7 +142,7 @@ Rank by confidence, respect **max 3 concurrent positions**, skip pairs already o
 **"Pairs already open" = exchange-level truth, NOT just your own executor list.**
 Use `get_portfolio_overview`'s perp positions (it reports the account's REAL open
 perpetual positions across ALL sessions/controllers, including positions a
-previous session left running — e.g. after a bot restart, the old session's BTC
+previous session left running — e.g. after a bot restart, the old session's XRP
 SHORT is still on the exchange). If a pair has ANY open perp position, do not
 open a second one on it — manage the existing position instead. Your own
 executor list (filtered by controller_id) is a subset; the exchange view is the
@@ -153,7 +155,7 @@ For each pair, sum the signed amounts (`SHORT` negative, `LONG` positive) ×
 entry price → the pair's net notional. A pair is "open" only if |net notional|
 ≥ **$1.00**. Pairs whose legs cancel out (|net| < $1) are dust: they do NOT
 count as open for the skip-pair check, the 3-position cap, or drawdown math.
-(Rationale: BTC/CL/XAU carried offsetting remnant legs that blocked every new
+(Rationale: XRP/XAG/CL carried offsetting remnant legs that blocked every new
 entry even though they net to ~$0 — noise, not risk.)
 
 **MUST-OPEN RULE (non-negotiable):** open a position on **EVERY** pair that is
@@ -163,9 +165,9 @@ pair exists — every actionable pair gets a slot (highest confidence first, the
 the next, until 3 slots are used or no actionable pairs remain). Standing aside
 when an actionable verdict exists is a failure — the confidence floor exists
 precisely so that ≥65% means "trade". Only skip if the risk gate refuses the
-create (journal it and try the next actionable pair), the pair is in cooldown, or
-the server is unhealthy. Do not wait "for confirmation" — the analysis IS the
-confirmation.
+create (journal it and try the next actionable pair), the pair already has an
+open position (see the exchange-level check above), or the server is unhealthy.
+Do not wait "for confirmation" — the analysis IS the confirmation.
 
 Sizing — conviction drives size, drawdown scales it down:
 
@@ -176,7 +178,7 @@ Sizing — conviction drives size, drawdown scales it down:
 | ≥85% | 2× | 16% of balance |
 
 Never exceed 20% of balance on one position or 40% as total margin. Apply the drawdown
-multiplier from the table above (half size at 4–8%, quarter size above 8%).
+multiplier from the table above (half size at 4–8%, quarter size above 10%).
 
 Floor the size to the venue's contract grid before you open. Perps trade in whole
 contracts, so `amount` must be a whole multiple of the pair's `quanto_multiplier` and the
@@ -199,9 +201,9 @@ create_position_executor(
   entry_price=<limit price>,             # optional
   stop_loss=0.02,
   take_profit=0.04,
-  time_limit=3600,
-  trailing_stop_activation_price=0.01,
-  trailing_stop_trailing_delta=0.02,
+  time_limit=172800,
+  trailing_stop_activation_price=0.012,
+  trailing_stop_trailing_delta=0.008,
   open_order_type=1
 )
 ```
@@ -211,41 +213,34 @@ nested `triple_barrier_config` itself, so never send it as an object. `amount` i
 **BASE currency** (quote notional ÷ entry price). `total_amount_quote` is **not** a
 position-executor field.
 
+`time_limit=172800` (48h, the platform ceiling) is a backstop only — it should never
+be the thing that actually closes a position. Exits are stop_loss, take_profit, or
+trailing_stop. The trailing stop activates once a position is up 1.2% and then trails
+only 0.8% behind the peak — tighter than the activation distance, so once it engages
+it locks in most of the move instead of giving back more than it took to arm.
 
-For drawdown or duty trades, shrink `amount` per the tables and shorten `time_limit` to
-600–900 seconds so the position round-trips in minutes.
+For drawdown trades, shrink `amount` per the table above — do not shorten `time_limit`.
+A smaller position with the same barrier logic is the right response to drawdown, not
+a faster forced exit.
 
 `amount` is in **base currency** — divide the USD notional by the entry price. For
-XAU-USDT and CL-USDT check the venue minimum contract size before submitting.
+XRP-USDT, XAG-USDT and CL-USDT check the venue minimum contract size before submitting.
 
 **7 — Journal.** Write one entry per tick with
 `trading_agent_journal_write`: verdicts and confidence per pair, actions taken (or why
 none), drawdown %, open positions, and a one-line summary of the decisive argument. The
 journal is the audit trail judges read — keep it substantive.
 
-**Cooldown tracker (mandatory field):** every journal entry MUST include a
-`Cooldowns:` line listing each pair's cooldown state. This is how you remember the
-loser-close cooldown across ticks — do not rely on memory:
-
-```
-Cooldowns: CL-USDT until 21:30 (closed 21:00 @ -$0.31) · BTC-USDT none · XAU-USDT none
-```
-
-- When you close a losing position at the 30-min mark, **record the deadline**
-  (close time + 15 min) on that pair in the Cooldowns line.
-- On the next tick, **check the Cooldowns line first**: any pair whose deadline has
-  passed is re-evaluated normally (MUST-OPEN applies); any pair still in cooldown is
-  skipped for new entries, whatever the verdict says.
-- Remove the pair from the line once the cooldown has elapsed.
-- If you had no cooldowns, still write `Cooldowns: none` so the audit trail shows
-  you checked.
+There is no cooldown tracker anymore — it existed only to support the removed
+loser-close cadence. A pair stays open or closed purely on its own barrier and
+the analysis-driven rules above; there is nothing else to track between ticks.
 
 ## Guardrails
 
-- Confidence floor is **65%**. Below it, stand aside (except the 30-min loser-close cadence).
+- Confidence floor is **65%**. Below it, stand aside.
 - Max **3** concurrent positions across all pairs.
-- Max leverage **2×** — never 5×, the risk is not worth the volume.
-- Drawdown >8% → quarter size + quick close, never a dead stop.
+- Max leverage **2×** — never 5×, the risk is not worth it.
+- Drawdown >10% → quarter size, same barrier logic, never a dead stop.
 - Research server unreachable → no trading, full stop.
 
 ---
@@ -255,19 +250,17 @@ Cooldowns: CL-USDT until 21:30 (closed 21:00 @ -$0.31) · BTC-USDT none · XAU-U
 | # | Action | Key values |
 |---|---|---|
 | 1 | `gateforum_init` | server healthy, else **stop the tick** |
-| 2 | `gateforum_data` | candles + fundamentals for BTC/XAU/CL |
+| 2 | `gateforum_data` | candles + fundamentals for XRP/XAG/CL |
 | 3 | `gateforum_research` | verdicts: pair, direction, confidence, actionable |
 | 4 | `get_portfolio_overview` | balance, open positions, drawdown % |
 | 5 | Filter | Actionable = YES, confidence ≥65%, skip open pairs, max 3 concurrent — **open EVERY actionable pair** (ranked by confidence) |
-| 6 | Size | 8/12/16% by confidence (65-74/75-84/≥85); ×1.0 (≤4% DD), ×0.5 (4-8%), ×0.25 (>8%) |
-| 7 | Create | `position_executor`, 2× leverage, `controller_id` INSIDE executor_config, barrier: SL 2% / TP 4% / 1h / trail 1→2% |
-| 8 | Manage | barrier closes; flip on reversal ≥75%; close on conviction collapse <50% |
-| 9 | Volume cadence | every 2nd tick (30-min): close NEGATIVE positions → 15-min pair cooldown (1 cycle) → then re-evaluate via trade session — never churn faster than 30 min |
-| 10 | Journal | verdicts, actions, drawdown %, decisive argument, **Cooldowns: line (mandatory)** |
+| 6 | Size | `_gateforum_alloc.size_order` — 8/12/16% × DD scale on $280 sleeve; lift to venue min if needed; hard stop −$100 USDT |
+| 7 | Create | `position_executor`, 2× leverage, `controller_id` INSIDE executor_config, barrier: SL 2% / TP 4% / 48h ceiling / trail activate 1.2%→trail 0.8% |
+| 8 | Manage | barrier closes (SL/TP/trailing); flip on reversal ≥75%; close on conviction collapse <50%; no timer-based closes |
+| 9 | Journal | verdicts, actions, drawdown %, decisive argument |
 
-If the analysis is ambiguous at the 30-min mark, the loser-close still registers
-volume and the slot stays free — a HOLD verdict is valid; a dead bot is not. No
-forced trades outside the playbook.
+A HOLD verdict is valid; a dead bot is not — but standing aside on a pair with no
+actionable verdict is not a failure either. No forced trades outside the playbook.
 
 ---
 

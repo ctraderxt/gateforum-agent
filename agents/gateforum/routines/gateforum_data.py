@@ -28,9 +28,9 @@ _BITGET_GRANULARITY = {
     "1h": "1H", "4h": "4H", "1d": "1D",
 }
 
-# CoinGecko ids for the crypto leg. Commodity perps (XAU/CL) have no CoinGecko
+# CoinGecko ids for the crypto leg. Commodity perps (XAG/CL/XAU) have no CoinGecko
 # entry — they fall back to pure price action, which is expected, not an error.
-_COINGECKO_IDS = {"BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana"}
+_COINGECKO_IDS = {"BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana", "XRP": "ripple"}
 
 _COMMODITY_CONTEXT = {
     "XAU": (
@@ -54,7 +54,7 @@ class Config(BaseModel):
     """Fetch candles and fundamentals for GateForum.s research pairs."""
 
     pairs: str = Field(
-        default="BTC-USDT,XAU-USDT,CL-USDT",
+        default="XRP-USDT,XAG-USDT,CL-USDT",
         description="Comma-separated pairs to gather data for (Hummingbot format)",
     )
     market_source: str = Field(

@@ -1,5 +1,7 @@
 # GateForum
 
+> **Cup split-book ($800):** Binance volume **$520** on **USD1-USDC** (fallback **USD1-USDT**) · Gate.io P&L **$280 USDT** · **P&L-sleeve stop $100 USDT**. See `agents/gateforum/ORGANIZER_CAPITAL.md`.
+
 ![GateForum](gateforum-img.png)
 
 An interpretable 12-role research council for Gate.io perpetuals. Four analysts brief the book, a bull and a bear argue, a research judge rules, then three risk analysts size the idea. Only BUY/SELL verdicts that clear 65% consensus become positions. Hummingbot V2 `position_executor` owns the lifecycle. Condor never trades on a dead or stale council.
@@ -12,14 +14,14 @@ Not a hummingbot/condor fork. Drop `agents/gateforum/` into a Condor checkout.
 
 ## What it does
 
-GateForum is a directional desk on Gate.io USDT-margined perpetuals. It does not emit a single-model signal. Every 15 minutes it convenes twelve specialised LLM roles on three deliberately uncorrelated books — BTC-USDT, XAU-USDT (gold), and CL-USDT (WTI). Intelligence is gathered in parallel, then subjected to two adversarial research rounds and a three-seat risk desk. The Condor tick reads the verdict table, opens only what the floor earned, and journals the argument. The research transcript is the product: a judge can read why a ticket existed.
+GateForum is a directional desk on Gate.io USDT-margined perpetuals. It does not emit a single-model signal. Every 15 minutes it convenes twelve specialised LLM roles on three deliberately uncorrelated books — XRP-USDT, XAG-USDT, and CL-USDT. Intelligence is gathered in parallel, then subjected to two adversarial research rounds and a three-seat risk desk. The Condor tick reads the verdict table, opens only what the floor earned, and journals the argument. The research transcript is the product: a judge can read why a ticket existed.
 
 Signal and execution are separate layers. Routines never touch an exchange connector. The venue lives in `default_trading_context` (`gate_io_perpetual`). Moving the same council to another perp venue is a one-line config change.
 
 ## Core logic
 
 1. **Health gate.** `gateforum_init` must see the research server on `127.0.0.1:8500`. If it is down, the tick stops. No leftover verdicts.
-2. **Briefing.** `gateforum_data` builds candle + fundamentals packets for BTC, gold, and crude.
+2. **Briefing.** `gateforum_data` builds candle + fundamentals packets for XRP, silver, and crude.
 3. **Phase 1 — intelligence.** Market, social, news, and fundamentals analysts run in parallel.
 4. **Phase 2 — adversarial.** Bull and bear argue for two sequential rounds. A research judge issues the analysis ruling and a stated `CONVICTION: 0–100`.
 5. **Phase 3 — risk.** Aggressive, neutral, and conservative analysts speak. The risk judge may HOLD only when **at least two of those three** also lean HOLD. A lone cautious veto is overruled; disagreement only cuts confidence.
@@ -28,7 +30,7 @@ Signal and execution are separate layers. Routines never touch an exchange conne
 8. **Skip-pair uses exchange truth.** A pair is already open only if net notional (LONG positive, SHORT negative) is ≥ $1. Offsetting dust does not consume a slot.
 9. **Size.** 65–74% → 8% of balance · 75–84% → 12% · ≥85% → 16%. Always 2×. Drawdown scales the same ticket: 0–4% full, 4–8% half, >8% quarter with a 10–15 minute time limit. Never a dead stop.
 10. **Barriers.** Every create is a `position_executor` with stop 2%, take 4%, 1 hour time limit, trailing activation 1% / delta 2%. The risk gate refuses unprotected or over-levered tickets.
-11. **Volume cadence.** Every second tick (30 minutes): close **losing** positions only, put that pair on a 15-minute cooldown, then re-evaluate from a fresh ≥65% verdict. Winners ride their barriers.
+11. **Volume sleeve.** Race turnover is `gf_peg_maker` on Binance (USD1-USDC→USD1-USDT), not timer-closes on this desk.
 12. **Journal.** One entry per tick, including a mandatory `Cooldowns:` line. The public floor on `:8600` shows the latest ruling in plain words.
 
 ## Safety

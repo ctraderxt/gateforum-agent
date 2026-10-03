@@ -26,7 +26,7 @@ class Config(BaseModel):
     """Run the GateForum research pipeline for each configured pair."""
 
     pairs: str = Field(
-        default="BTC-USDT,XAU-USDT,CL-USDT",
+        default="XRP-USDT,XAG-USDT,CL-USDT",
         description="Comma-separated pairs to research (Hummingbot format)",
     )
     server_url: str = Field(

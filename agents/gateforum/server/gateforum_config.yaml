@@ -7,17 +7,21 @@
 
 # ── Debate pairs (Hummingbot-USDT perpetuals; must exist on the venue) ──
 pairs:
-  - BTC-USDT   # crypto
-  - XAU-USDT   # spot gold
+  - XRP-USDT   # crypto beta (liquid, finer min size than BTC on small sleeve)
+  - XAG-USDT   # spot silver (macro, higher beta than gold)
   - CL-USDT    # WTI crude oil
 
 # Aliases the engine understands when a request names the asset by base symbol.
 pair_aliases:
-  BTC: BTC-USDT
-  XAU: XAU-USDT
+  XRP: XRP-USDT
+  XAG: XAG-USDT
   CL: CL-USDT
-  GOLD: XAU-USDT
+  SILVER: XAG-USDT
   OIL: CL-USDT
+  # legacy aliases kept so old transcripts still resolve
+  BTC: XRP-USDT
+  XAU: XAG-USDT
+  GOLD: XAG-USDT
 
 # ── LLM provider ─────────────────────────────────────────────────────
 # Default: WSL Claude Code email login (claude -p). No API key.

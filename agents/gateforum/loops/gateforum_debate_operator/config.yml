@@ -1,0 +1,29 @@
+frequency_sec: 900
+execution_mode: loop
+tick_timeout_sec: 1500
+total_amount_quote: 280
+risk_limits:
+  max_position_size_quote: 120
+  max_open_executors: 3
+  max_drawdown_pct: 36
+  max_leverage: 2
+  require_triple_barrier: true
+  require_trailing_stop: true
+  pnl_stop_loss_usd: 100
+server_name: local
+agent_key: ""
+model_base_url: ""
+trading_context: Trade XRP-USDT, XAG-USDT and CL-USDT on gate_io_perpetual
+max_ticks: 0
+restart_on_boot: false
+bot_name: ""
+bot_mode: auto
+canvas_enabled: true
+canvas_nudge_ticks: 12
+canvas_band_usd: 25.0
+volume_arm_usd: 520
+pnl_arm_usd: 280
+race_envelope_usd: 800
+volume_controller: gf_peg_maker
+volume_pair: USD1-USDC
+volume_pair_fallback: USD1-USDT
